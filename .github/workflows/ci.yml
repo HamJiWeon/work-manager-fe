@@ -54,9 +54,11 @@ jobs:
           fi
 
       - name: Build
+        if: ${{ hashFiles('app/**', 'src/app/**', 'pages/**', 'src/pages/**') != '' }}
         run: npm run build
 
       - name: Type check
+        if: ${{ hashFiles('app/**', 'src/app/**', 'pages/**', 'src/pages/**') != '' }}
         run: |
           if node -e 'process.exit(require("./package.json").scripts?.typecheck ? 0 : 1)'; then
             npm run typecheck
