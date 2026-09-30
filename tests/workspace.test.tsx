@@ -47,4 +47,36 @@ describe('workspace', () => {
     // then
     expect(within(sidebar).getByRole('button', { name: '보드1' })).toBeVisible()
   })
+  it('return_home_from_board_with_brand_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    await user.click(screen.getByRole('button', { name: '보드1' }))
+    expect(screen.getByRole('heading', { name: 'User' })).toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: 'w. Work Manager' }))
+    // then
+    expect(screen.getByRole('heading', { name: '작업 현황', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '프로젝트 선택' })).toHaveValue('all')
+    expect(screen.queryByRole('navigation', { name: '프로젝트 메뉴 선택' })).not.toBeInTheDocument()
+  })
+
+  it('close_mobile_menu_on_navigation_and_escape_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    // when
+    await user.click(screen.getByRole('button', { name: '모바일 메뉴 열기' }))
+    await user.click(screen.getByRole('button', { name: '보드1' }))
+    // then
+    expect(screen.getByRole('button', { name: '모바일 메뉴 열기' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('heading', { name: 'User' })).toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: '모바일 메뉴 열기' }))
+    await user.keyboard('{Escape}')
+    // then
+    expect(screen.getByRole('button', { name: '모바일 메뉴 열기' })).toHaveFocus()
+    expect(screen.queryByRole('button', { name: '모바일 메뉴 닫기' })).not.toBeInTheDocument()
+  })
+
 })

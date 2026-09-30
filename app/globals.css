@@ -132,3 +132,31 @@ html {
   -webkit-user-select: none;
   user-select: none;
 }
+
+.workspace.sidebar-hidden .sidebar { display: none; }
+.mobile-sidebar-toggle, .sidebar-backdrop { display: none; }
+@media(max-width:600px) {
+  .workspace, .workspace.sidebar-hidden { grid-template-columns: minmax(0,1fr); }
+  .workspace .sidebar { display: none; }
+  .desktop-sidebar-toggle { display: none; }
+  .mobile-sidebar-toggle { display: grid; }
+  .workspace.mobile-menu-open .sidebar {
+    display: flex;
+    position: fixed;
+    top: 65px;
+    bottom: 0;
+    left: 0;
+    width: min(280px, 85vw);
+    overflow-y: auto;
+    z-index: 21;
+    box-shadow: 8px 0 24px #21342118;
+  }
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 65px 0 0;
+    background: #18251b40;
+    z-index: 20;
+  }
+  .calendar-day { width: 100%; aspect-ratio: auto; min-height: 44px; }
+}

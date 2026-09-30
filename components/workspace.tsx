@@ -1,7 +1,6 @@
 "use client"
 
-import {useState} from 'react'
-import Link from 'next/link'
+import {useRef, useState} from 'react'
 import {Activity, Check, ChevronRight, Folder, LayoutDashboard, PanelLeft, SquareKanban} from 'lucide-react'
 import {ALL_PROJECTS, PROJECTS, createSampleTasks, getMonthDays} from '@/lib/activity'
 import {ActivityCalendar} from './activity-calendar'
@@ -13,6 +12,8 @@ import {BoardList} from './board-list'
 export function Workspace({today}: { today: string }) {
     const [projectId, setProjectId] = useState(ALL_PROJECTS)
     const [sidebarOpen, setSidebarOpen] = useState(true)
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const mobileMenuButton = useRef<HTMLButtonElement>(null)
     const [selectedDate, setSelectedDate] = useState<string | null>(today)
     const [section, setSection] = useState<'overview' | 'projects' | 'project' | 'common'>('overview')
     const [document, setDocument] = useState<string | null>(null)
@@ -24,12 +25,18 @@ export function Workspace({today}: { today: string }) {
     const selectedTasks = tasks.filter(task => task.date === selectedDate)
     const selectedProject = PROJECTS.find(project => project.id === projectId)
     const isProjectPage = section === 'project' || section === 'common'
+    const handleMobileMenuClose = () => {
+        setMobileMenuOpen(false)
+        if (mobileMenuOpen) mobileMenuButton.current?.focus()
+    }
     const handleProjectOpen = (id: string) => {
+        handleMobileMenuClose()
         setProjectId(id);
         setDocument(null);
         setSection('project')
     }
     const handleProjectChange = (id: string) => {
+        handleMobileMenuClose()
         setProjectId(id);
         setDocument(null);
         setSection('overview')
@@ -40,6 +47,7 @@ export function Workspace({today}: { today: string }) {
         setSelectedDate(null)
     }
     const handleProjectsOpen = () => {
+        handleMobileMenuClose()
         setSection('projects');
         setDocument(null)
     }
@@ -52,9 +60,10 @@ export function Workspace({today}: { today: string }) {
         setDocument(name)
     }
 
-    return <div className={`workspace ${sidebarOpen ? '' : 'sidebar-hidden'}`}>
-        <aside className="sidebar" aria-label="워크스페이스 탐색" hidden={!sidebarOpen}>
-            <Link href="/" className="brand"><span className="brand-mark">w.</span> Work Manager</Link>
+    return <div className={`workspace ${sidebarOpen ? '' : 'sidebar-hidden'} ${mobileMenuOpen ? 'mobile-menu-open' : ''}`} onKeyDown={event => { if (event.key === 'Escape' && mobileMenuOpen) handleMobileMenuClose() }}>
+        {mobileMenuOpen && <button className="sidebar-backdrop" aria-label="모바일 메뉴 닫기" onClick={handleMobileMenuClose}/>}
+        <aside id="workspace-sidebar" className="sidebar" aria-label="워크스페이스 탐색">
+            <button className="brand" onClick={() => handleProjectChange(ALL_PROJECTS)}><span className="brand-mark">w.</span> Work Manager</button>
             <div className="workspace-label">MY WORKSPACE</div>
             <button className={`nav-item ${projectId === ALL_PROJECTS && section === 'overview' ? 'active' : ''}`}
                     onClick={() => handleProjectChange(ALL_PROJECTS)}><LayoutDashboard size={16}/>작업 현황
@@ -79,9 +88,10 @@ export function Workspace({today}: { today: string }) {
         </aside>
         <div className="main-shell">
             <header className="topbar">
-                <button className="icon-button" aria-label={sidebarOpen ? '사이드바 접기' : '사이드바 펼치기'}
+                <button className="icon-button desktop-sidebar-toggle" aria-label={sidebarOpen ? '사이드바 접기' : '사이드바 펼치기'}
                         aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(!sidebarOpen)}><PanelLeft size={18}/>
                 </button>
+                <button ref={mobileMenuButton} className="icon-button mobile-sidebar-toggle" aria-label={mobileMenuOpen ? '모바일 메뉴 접기' : '모바일 메뉴 열기'} aria-expanded={mobileMenuOpen} aria-controls="workspace-sidebar" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}><PanelLeft size={18}/></button>
                 <span className="topbar-divider"/>
                 <nav className="breadcrumbs" aria-label="현재 위치">
                     <button className="breadcrumb-button" onClick={() => handleProjectChange(ALL_PROJECTS)}>워크스페이스</button>
