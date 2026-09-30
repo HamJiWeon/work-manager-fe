@@ -25,3 +25,9 @@ npm run build
 - `tests/*.test.tsx`: 화면 동작 테스트
 
 기존 GitHub Actions CI에서도 위 검사 명령어를 실행합니다.
+
+## 테스트 커버리지
+
+```bash
+npm run test:coverage
+```
