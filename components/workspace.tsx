@@ -1,6 +1,7 @@
 "use client"
 
-import {useRef, useState} from 'react'
+import {useEffect, useRef, useState} from 'react'
+import type {KeyboardEvent as ReactKeyboardEvent} from 'react'
 import {Activity, Check, ChevronRight, Folder, LayoutDashboard, PanelLeft, SquareKanban} from 'lucide-react'
 import {ALL_PROJECTS, PROJECTS, createSampleTasks, getMonthDays} from '@/lib/activity'
 import {ActivityCalendar} from './activity-calendar'
@@ -8,12 +9,18 @@ import {CommonPage} from './common-page'
 import {ProjectList} from './project-list'
 import {BoardList} from './board-list'
 
+const FOCUSABLE_ELEMENT_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+
+const getFocusableElements = (container: HTMLElement) => Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENT_SELECTOR))
+    .filter(element => !element.closest('details:not([open])') && !element.closest('[hidden]'))
+
 /** 프로젝트 탐색과 활동 조회를 제공한다. 데이터는 API 연결 전의 예시다. */
 export function Workspace({today}: { today: string }) {
     const [projectId, setProjectId] = useState(ALL_PROJECTS)
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const mobileMenuButton = useRef<HTMLButtonElement>(null)
+    const sidebar = useRef<HTMLElement>(null)
     const [selectedDate, setSelectedDate] = useState<string | null>(today)
     const [section, setSection] = useState<'overview' | 'projects' | 'project' | 'common'>('overview')
     const [document, setDocument] = useState<string | null>(null)
@@ -25,9 +32,37 @@ export function Workspace({today}: { today: string }) {
     const selectedTasks = tasks.filter(task => task.date === selectedDate)
     const selectedProject = PROJECTS.find(project => project.id === projectId)
     const isProjectPage = section === 'project' || section === 'common'
+    useEffect(() => {
+        if (mobileMenuOpen && sidebar.current) getFocusableElements(sidebar.current)[0]?.focus()
+    }, [mobileMenuOpen])
     const handleMobileMenuClose = () => {
         setMobileMenuOpen(false)
         if (mobileMenuOpen) mobileMenuButton.current?.focus()
+    }
+    const handleWorkspaceKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+        if (!mobileMenuOpen) return
+        if (event.key === 'Escape') {
+            handleMobileMenuClose()
+            return
+        }
+        if (event.key !== 'Tab' || !sidebar.current) return
+
+        const focusableElements = getFocusableElements(sidebar.current)
+        const firstElement = focusableElements[0]
+        const lastElement = focusableElements.at(-1)
+        if (!firstElement || !lastElement) return
+        const activeElement = sidebar.current.ownerDocument.activeElement
+
+        if (event.shiftKey && activeElement === firstElement) {
+            event.preventDefault()
+            lastElement.focus()
+        } else if (!event.shiftKey && activeElement === lastElement) {
+            event.preventDefault()
+            firstElement.focus()
+        } else if (!sidebar.current.contains(activeElement)) {
+            event.preventDefault()
+            firstElement.focus()
+        }
     }
     const handleProjectOpen = (id: string) => {
         handleMobileMenuClose()
@@ -60,9 +95,9 @@ export function Workspace({today}: { today: string }) {
         setDocument(name)
     }
 
-    return <div className={`workspace ${sidebarOpen ? '' : 'sidebar-hidden'} ${mobileMenuOpen ? 'mobile-menu-open' : ''}`} onKeyDown={event => { if (event.key === 'Escape' && mobileMenuOpen) handleMobileMenuClose() }}>
+    return <div className={`workspace ${sidebarOpen ? '' : 'sidebar-hidden'} ${mobileMenuOpen ? 'mobile-menu-open' : ''}`} onKeyDown={handleWorkspaceKeyDown}>
         {mobileMenuOpen && <button className="sidebar-backdrop" aria-label="모바일 메뉴 닫기" onClick={handleMobileMenuClose}/>}
-        <aside id="workspace-sidebar" className="sidebar" aria-label="워크스페이스 탐색">
+        <aside ref={sidebar} id="workspace-sidebar" className="sidebar" aria-label="워크스페이스 탐색">
             <button className="brand" onClick={() => handleProjectChange(ALL_PROJECTS)}><span className="brand-mark">w.</span> Work Manager</button>
             <div className="workspace-label">SPACE</div>
             <button className={`nav-item ${projectId === ALL_PROJECTS && section === 'overview' ? 'active' : ''}`}

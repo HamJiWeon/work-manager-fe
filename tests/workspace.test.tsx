@@ -82,4 +82,23 @@ describe('workspace', () => {
     expect(screen.queryByRole('button', { name: '모바일 메뉴 닫기' })).not.toBeInTheDocument()
   })
 
+  it('trap_focus_inside_open_mobile_menu_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    const mobileMenuButton = screen.getByRole('button', { name: '모바일 메뉴 열기' })
+    // when
+    await user.click(mobileMenuButton)
+    // then
+    expect(screen.getByRole('button', { name: 'w. Work Manager' })).toHaveFocus()
+    // when
+    await user.tab({ shift: true })
+    // then
+    expect(screen.getByRole('button', { name: '보드2' })).toHaveFocus()
+    // when
+    await user.tab()
+    // then
+    expect(screen.getByRole('button', { name: 'w. Work Manager' })).toHaveFocus()
+  })
+
 })
