@@ -106,7 +106,8 @@ export function Workspace({today: initialToday}: { today: string }) {
     }
 
     return <div className={`workspace ${sidebarOpen ? '' : 'sidebar-hidden'} ${mobileMenuOpen ? 'mobile-menu-open' : ''}`} onKeyDown={handleWorkspaceKeyDown}>
-        {mobileMenuOpen && <button className="sidebar-backdrop" aria-label="모바일 메뉴 닫기" onClick={handleMobileMenuClose}/>}
+        <button className="sidebar-backdrop" aria-label="모바일 메뉴 닫기" aria-hidden={!mobileMenuOpen}
+                tabIndex={mobileMenuOpen ? 0 : -1} onClick={handleMobileMenuClose}/>
         <aside ref={sidebar} id="workspace-sidebar" className="sidebar" aria-label="워크스페이스 탐색">
             <button className="brand" onClick={() => handleProjectChange(ALL_PROJECTS)}><span className="brand-mark">w.</span> Work Manager</button>
             <div className="workspace-label">SPACE</div>
