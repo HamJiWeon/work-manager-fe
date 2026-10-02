@@ -64,14 +64,14 @@ export function Workspace({today}: { today: string }) {
         {mobileMenuOpen && <button className="sidebar-backdrop" aria-label="모바일 메뉴 닫기" onClick={handleMobileMenuClose}/>}
         <aside id="workspace-sidebar" className="sidebar" aria-label="워크스페이스 탐색">
             <button className="brand" onClick={() => handleProjectChange(ALL_PROJECTS)}><span className="brand-mark">w.</span> Work Manager</button>
-            <div className="workspace-label">MY WORKSPACE</div>
+            <div className="workspace-label">SPACE</div>
             <button className={`nav-item ${projectId === ALL_PROJECTS && section === 'overview' ? 'active' : ''}`}
                     onClick={() => handleProjectChange(ALL_PROJECTS)}><LayoutDashboard size={16}/>작업 현황
             </button>
             <section className="nav-section">
                 <h2><button className={`project-nav ${section === 'projects' ? 'active' : ''}`}
                             onClick={handleProjectsOpen}
-                            aria-current={section === 'projects' ? 'page' : undefined}>Project <span>{PROJECTS.length}</span>
+                            aria-current={section === 'projects' ? 'page' : undefined}>PROJECT <span>{PROJECTS.length}</span>
                 </button></h2>
                 {PROJECTS.map(project => <details open key={project.id}>
                     <summary><Folder size={15}/><span>{project.name}</span></summary>
@@ -106,9 +106,9 @@ export function Workspace({today}: { today: string }) {
                 {isProjectPage && <div className="project-context"><button className="common-back" onClick={handleProjectsOpen}>프로젝트 리스트로 돌아가기</button><h1>{selectedProject?.name}</h1></div>}
                 {isProjectPage && !document && <nav className="list-switcher" aria-label="프로젝트 메뉴 선택">
                     <button aria-current={section === 'project' ? 'page' : undefined}
-                            onClick={() => handleProjectOpen(projectId)}>Project
+                            onClick={() => handleProjectOpen(projectId)}>PROJECT
                     </button>
-                    <button aria-current={section === 'common' ? 'page' : undefined} onClick={handleCommonOpen}>Common
+                    <button aria-current={section === 'common' ? 'page' : undefined} onClick={handleCommonOpen}>WORKSPACE
                     </button>
                 </nav>}
                 {section === 'projects' ? <ProjectList onOpenProject={handleProjectOpen}/> : section === 'common' ?

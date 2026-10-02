@@ -11,8 +11,9 @@ describe('workspace', () => {
     const user = userEvent.setup()
     render(<Workspace today={TODAY} />)
     const sidebar = screen.getByRole('complementary', { name: '워크스페이스 탐색' })
+    expect(within(sidebar).getByText('SPACE')).toBeInTheDocument()
     // when
-    await user.click(within(sidebar).getByRole('button', { name: /Project/ }))
+    await user.click(within(sidebar).getByRole('button', { name: /PROJECT/ }))
     // then
     expect(screen.queryByRole('navigation', { name: '프로젝트 메뉴 선택' })).not.toBeInTheDocument()
     // when
@@ -24,7 +25,7 @@ describe('workspace', () => {
     expect(within(sidebar).getByRole('button', { name: '보드1' })).toHaveClass('active')
     // when
     const navigation = screen.getByRole('navigation', { name: '프로젝트 메뉴 선택' })
-    await user.click(within(navigation).getByRole('button', { name: 'Common' }))
+    await user.click(within(navigation).getByRole('button', { name: 'WORKSPACE' }))
     // then
     expect(screen.getByRole('button', { name: /0720 회의록.md/ })).toBeInTheDocument()
     expect(within(sidebar).getByRole('button', { name: '보드1' })).not.toHaveClass('active')
