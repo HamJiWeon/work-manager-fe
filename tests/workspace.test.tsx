@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { Workspace } from '@/components/workspace'
 
 const TODAY = '2026-09-09'
@@ -99,6 +99,20 @@ describe('workspace', () => {
     await user.tab()
     // then
     expect(screen.getByRole('button', { name: 'w. Work Manager' })).toHaveFocus()
+  })
+
+  it('refresh_today_at_seoul_midnight_ok', () => {
+    // given
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-30T14:59:59.000Z'))
+    const { unmount } = render(<Workspace today="2026-09-30" />)
+    // when
+    act(() => vi.advanceTimersByTime(2_000))
+    // then
+    expect(screen.getByRole('heading', { name: '2026년 10월' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /2026-10-01 오늘/ })).toHaveAttribute('aria-pressed', 'true')
+    unmount()
+    vi.useRealTimers()
   })
 
 })

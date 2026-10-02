@@ -3,7 +3,7 @@
 import {useEffect, useRef, useState} from 'react'
 import type {KeyboardEvent as ReactKeyboardEvent} from 'react'
 import {Activity, Check, ChevronRight, Folder, LayoutDashboard, PanelLeft, SquareKanban} from 'lucide-react'
-import {ALL_PROJECTS, PROJECTS, createSampleTasks, getMonthDays} from '@/lib/activity'
+import {ALL_PROJECTS, PROJECTS, createSampleTasks, getMillisecondsUntilNextSeoulDay, getMonthDays, getToday} from '@/lib/activity'
 import {ActivityCalendar} from './activity-calendar'
 import {CommonPage} from './common-page'
 import {ProjectList} from './project-list'
@@ -15,16 +15,17 @@ const getFocusableElements = (container: HTMLElement) => Array.from(container.qu
     .filter(element => !element.closest('details:not([open])') && !element.closest('[hidden]'))
 
 /** 프로젝트 탐색과 활동 조회를 제공한다. 데이터는 API 연결 전의 예시다. */
-export function Workspace({today}: { today: string }) {
+export function Workspace({today: initialToday}: { today: string }) {
     const [projectId, setProjectId] = useState(ALL_PROJECTS)
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const mobileMenuButton = useRef<HTMLButtonElement>(null)
     const sidebar = useRef<HTMLElement>(null)
-    const [selectedDate, setSelectedDate] = useState<string | null>(today)
+    const [today, setToday] = useState(initialToday)
+    const [selectedDate, setSelectedDate] = useState<string | null>(initialToday)
     const [section, setSection] = useState<'overview' | 'projects' | 'project' | 'common'>('overview')
     const [document, setDocument] = useState<string | null>(null)
-    const [month, setMonth] = useState(today.slice(0, 7))
+    const [month, setMonth] = useState(initialToday.slice(0, 7))
     const days = getMonthDays(month)
     const tasks = createSampleTasks(days.filter(day => day.date <= today)).filter(task => projectId === ALL_PROJECTS || task.projectId === projectId)
     const counts = new Map<string, number>()
@@ -35,6 +36,15 @@ export function Workspace({today}: { today: string }) {
     useEffect(() => {
         if (mobileMenuOpen && sidebar.current) getFocusableElements(sidebar.current)[0]?.focus()
     }, [mobileMenuOpen])
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            const nextToday = getToday()
+            setSelectedDate(currentDate => currentDate === today ? nextToday : currentDate)
+            setMonth(currentMonth => currentMonth === today.slice(0, 7) ? nextToday.slice(0, 7) : currentMonth)
+            setToday(nextToday)
+        }, getMillisecondsUntilNextSeoulDay() + 1_000)
+        return () => window.clearTimeout(timer)
+    }, [today])
     const handleMobileMenuClose = () => {
         setMobileMenuOpen(false)
         if (mobileMenuOpen) mobileMenuButton.current?.focus()

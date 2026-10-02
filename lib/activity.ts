@@ -2,14 +2,22 @@ export const PROJECTS = [{ id: 'project-1', name: '프로젝트1' }, { id: 'proj
 export const ALL_PROJECTS = 'all'
 export const DAYS_IN_WEEK = 7
 const DAY_MS = 86_400_000
+const SEOUL_UTC_OFFSET_MS = 9 * 60 * 60 * 1000
 const SAMPLE_TITLES = ['화면 구성 정리', '컴포넌트 구현', '사용자 흐름 점검', 'API 응답 확인', '접근성 개선', '문서 업데이트']
 
 export interface CompletedTask { id: string; projectId: string; title: string; date: string }
 export interface ActivityDay { date: string; weekday: number; month: number; day: number }
 
 /** 서울 기준 오늘 날짜를 구해 서버와 클라이언트의 날짜 기준을 통일한다. */
-export function getToday(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+export function getToday(date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+}
+
+/** 다음 서울 자정까지 남은 시간을 밀리초로 계산한다. */
+export function getMillisecondsUntilNextSeoulDay(date = new Date()): number {
+  const [year, month, day] = getToday(date).split('-').map(Number)
+  const nextMidnight = Date.UTC(year, month - 1, day + 1) - SEOUL_UTC_OFFSET_MS
+  return Math.max(0, nextMidnight - date.getTime())
 }
 
 /** 지정한 월의 실제 날짜를 생성하며 윤년과 월별 일수를 반영한다. */
@@ -45,4 +53,3 @@ export function createSampleTasks(days: ActivityDay[]): CompletedTask[] {
     }))
   })
 }
-
