@@ -21,11 +21,13 @@ describe('workspace', () => {
     expect(screen.getByRole('heading', { name: 'User' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Login' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Team' })).toBeInTheDocument()
+    expect(within(sidebar).getByRole('button', { name: '보드1' })).toHaveClass('active')
     // when
     const navigation = screen.getByRole('navigation', { name: '프로젝트 메뉴 선택' })
     await user.click(within(navigation).getByRole('button', { name: 'Common' }))
     // then
     expect(screen.getByRole('button', { name: /0720 회의록.md/ })).toBeInTheDocument()
+    expect(within(sidebar).getByRole('button', { name: '보드1' })).not.toHaveClass('active')
     // when
     await user.click(screen.getByRole('button', { name: '워크스페이스' }))
     // then

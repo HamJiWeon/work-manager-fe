@@ -76,7 +76,7 @@ export function Workspace({today}: { today: string }) {
                 {PROJECTS.map(project => <details open key={project.id}>
                     <summary><Folder size={15}/><span>{project.name}</span></summary>
                     <button
-                        className={`nav-item board-link ${projectId === project.id && isProjectPage ? 'active' : ''}`}
+                        className={`nav-item board-link ${projectId === project.id && section === 'project' ? 'active' : ''}`}
                         onClick={() => handleProjectOpen(project.id)}><SquareKanban
                         size={15}/>보드{project.id.slice(-1)}</button>
                 </details>)}
