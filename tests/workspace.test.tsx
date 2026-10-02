@@ -101,6 +101,29 @@ describe('workspace', () => {
     expect(screen.getByRole('button', { name: 'w. Work Manager' })).toHaveFocus()
   })
 
+  it('trap_focus_with_collapsed_last_project_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    const mobileMenuButton = screen.getByRole('button', { name: '모바일 메뉴 열기' })
+    await user.click(mobileMenuButton)
+    const sidebar = screen.getByRole('complementary', { name: '워크스페이스 탐색' })
+    const lastSummary = within(sidebar).getByText('프로젝트2', { exact: true }).closest('summary')!
+    // when
+    await user.click(lastSummary)
+    await user.tab()
+    // then
+    expect(screen.getByRole('button', { name: 'w. Work Manager' })).toHaveFocus()
+    // when
+    await user.tab({ shift: true })
+    // then
+    expect(lastSummary).toHaveFocus()
+    // when
+    await user.keyboard('{Escape}')
+    // then
+    expect(mobileMenuButton).toHaveFocus()
+  })
+
   it('refresh_today_at_seoul_midnight_ok', () => {
     // given
     vi.useFakeTimers()

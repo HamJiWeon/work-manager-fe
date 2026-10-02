@@ -12,7 +12,7 @@ import {BoardList} from './board-list'
 const FOCUSABLE_ELEMENT_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
 
 const getFocusableElements = (container: HTMLElement) => Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_ELEMENT_SELECTOR))
-    .filter(element => !element.closest('details:not([open])') && !element.closest('[hidden]'))
+    .filter(element => (!element.closest('details:not([open])') || element.matches('details:not([open]) > summary:first-of-type')) && !element.closest('[hidden]'))
 
 /** 프로젝트 탐색과 활동 조회를 제공한다. 데이터는 API 연결 전의 예시다. */
 export function Workspace({today: initialToday}: { today: string }) {
