@@ -22,7 +22,7 @@ export function CommonPage({ document, onOpenDocument, onBack }: CommonPageProps
     return <>
       <button className="common-back" onClick={onBack}><ArrowLeft size={15} />공통 문서 목록</button>
       <div className="eyebrow">COMMON / DOCUMENTS</div>
-      <h1>{document}</h1>
+      <h2 className="project-overview-title">{document}</h2>
       <div className="document-empty"><FileText size={28} /><h2>아직 작성된 내용이 없어요</h2><p>공통 문서를 위한 공간입니다.</p></div>
     </>
   }

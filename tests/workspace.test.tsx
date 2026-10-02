@@ -30,6 +30,11 @@ describe('workspace', () => {
     expect(screen.getByRole('button', { name: /0720 회의록.md/ })).toBeInTheDocument()
     expect(within(sidebar).getByRole('button', { name: '보드1' })).not.toHaveClass('active')
     // when
+    await user.click(screen.getByRole('button', { name: /0720 회의록.md/ }))
+    // then
+    expect(screen.getByRole('heading', { name: '프로젝트1', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '0720 회의록.md', level: 2 })).toBeInTheDocument()
+    // when
     await user.click(screen.getByRole('button', { name: '워크스페이스' }))
     // then
     expect(screen.getByRole('heading', { name: '작업 현황', level: 1 })).toBeInTheDocument()
