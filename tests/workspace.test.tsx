@@ -5,7 +5,39 @@ import { Workspace } from '@/components/workspace'
 
 const TODAY = '2026-09-09'
 
+async function openProject(user: ReturnType<typeof userEvent.setup>) {
+  const sidebar = screen.getByRole('complementary', { name: '워크스페이스 탐색' })
+  await user.click(within(sidebar).getByRole('button', { name: /PROJECT/ }))
+  await user.click(screen.getByRole('button', { name: /프로젝트1.*작업 현황 보기/ }))
+}
+
 describe('workspace', () => {
+  it('switch_and_close_screen_tabs_without_back_buttons_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    await openProject(user)
+    await user.click(screen.getByRole('button', { name: /User.*사용자 정보/ }))
+    // then
+    expect(screen.getByRole('tab', { name: 'User' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByText('프로젝트 리스트로 돌아가기')).not.toBeInTheDocument()
+    expect(screen.queryByText('보드 목록으로 돌아가기')).not.toBeInTheDocument()
+    expect(screen.queryByText('BOARD / CARDS')).not.toBeInTheDocument()
+    expect(screen.queryByText('상태별 카드를 확인하세요.')).not.toBeInTheDocument()
+    expect(screen.queryByText('드래그하여 카드의 상태와 순서를 바꿔보세요.')).not.toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('tab', { name: '프로젝트1' }))
+    await user.click(screen.getByRole('tab', { name: 'User' }))
+    // then
+    expect(await screen.findByRole('button', { name: 'Team 카드 열기' })).toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: 'User 탭 닫기' }))
+    // then
+    expect(screen.queryByRole('tab', { name: 'User' })).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '프로젝트1' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: /User.*사용자 정보/ })).toBeInTheDocument()
+  })
+
   it('open_project_common_and_return_home_ok', async () => {
     // given
     const user = userEvent.setup()
@@ -22,23 +54,43 @@ describe('workspace', () => {
     expect(screen.getByRole('heading', { name: 'User' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Login' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Team' })).toBeInTheDocument()
-    expect(within(sidebar).getByRole('button', { name: '보드1' })).toHaveClass('active')
+    expect(within(sidebar).getByRole('button', { name: '프로젝트1 User 보드' })).toBeInTheDocument()
+    expect(within(sidebar).queryByText('보드1')).not.toBeInTheDocument()
     // when
     const navigation = screen.getByRole('navigation', { name: '프로젝트 메뉴 선택' })
     await user.click(within(navigation).getByRole('button', { name: 'WORKSPACE' }))
     // then
     expect(screen.getByRole('button', { name: /0720 회의록.md/ })).toBeInTheDocument()
-    expect(within(sidebar).getByRole('button', { name: '보드1' })).not.toHaveClass('active')
+    expect(within(sidebar).getByRole('button', { name: '프로젝트1 User 보드' })).not.toHaveClass('active')
     // when
     await user.click(screen.getByRole('button', { name: /0720 회의록.md/ }))
     // then
     expect(screen.getByRole('heading', { name: '프로젝트1', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '0720 회의록.md', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '문서 제목' })).toHaveValue('0720 회의록')
+    expect(screen.getByRole('textbox', { name: 'Markdown 작성' })).toBeInTheDocument()
     // when
-    await user.click(screen.getByRole('button', { name: '워크스페이스' }))
+    await user.click(screen.getByRole('tab', { name: '워크스페이스' }))
     // then
     expect(screen.getByRole('heading', { name: '작업 현황', level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: '프로젝트 메뉴 선택' })).not.toBeInTheDocument()
+  })
+
+  it('open_card_from_board_list_and_return_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    await openProject(user)
+    expect(screen.queryByRole('button', { name: '세로 배치' })).not.toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: /User 사용자 정보/ }))
+    // then
+    expect(await screen.findByRole('region', { name: '시작 전 카드 목록' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '세로 배치' })).toHaveAttribute('aria-pressed', 'true')
+    // when
+    await user.click(screen.getByRole('tab', { name: '프로젝트1' }))
+    // then
+    expect(screen.getByRole('button', { name: /User 사용자 정보/ })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '시작 전 카드 목록' })).not.toBeInTheDocument()
   })
 
   it('toggle_project_folder_by_name_ok', async () => {
@@ -49,17 +101,17 @@ describe('workspace', () => {
     // when
     await user.click(within(sidebar).getByText('프로젝트1', { exact: true }))
     // then
-    expect(within(sidebar).getByText('보드1')).not.toBeVisible()
+    expect(within(sidebar).getByRole('button', { name: '프로젝트1 User 보드', hidden: true })).not.toBeVisible()
     // when
     await user.click(within(sidebar).getByText('프로젝트1', { exact: true }))
     // then
-    expect(within(sidebar).getByRole('button', { name: '보드1' })).toBeVisible()
+    expect(within(sidebar).getByRole('button', { name: '프로젝트1 User 보드' })).toBeVisible()
   })
   it('return_home_from_board_with_brand_ok', async () => {
     // given
     const user = userEvent.setup()
     render(<Workspace today={TODAY} />)
-    await user.click(screen.getByRole('button', { name: '보드1' }))
+    await openProject(user)
     expect(screen.getByRole('heading', { name: 'User' })).toBeInTheDocument()
     // when
     await user.click(screen.getByRole('button', { name: 'w. Work Manager' }))
@@ -75,10 +127,10 @@ describe('workspace', () => {
     render(<Workspace today={TODAY} />)
     // when
     await user.click(screen.getByRole('button', { name: '모바일 메뉴 열기' }))
-    await user.click(screen.getByRole('button', { name: '보드1' }))
+    await user.click(screen.getByRole('button', { name: '프로젝트1 User 보드' }))
     // then
     expect(screen.getByRole('button', { name: '모바일 메뉴 열기' })).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.getByRole('heading', { name: 'User' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'User', level: 2 })).toBeInTheDocument()
     // when
     await user.click(screen.getByRole('button', { name: '모바일 메뉴 열기' }))
     await user.keyboard('{Escape}')
@@ -99,7 +151,7 @@ describe('workspace', () => {
     // when
     await user.tab({ shift: true })
     // then
-    expect(screen.getByRole('button', { name: '보드2' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: '프로젝트2 Team 보드' })).toHaveFocus()
     // when
     await user.tab()
     // then
@@ -127,6 +179,48 @@ describe('workspace', () => {
     await user.keyboard('{Escape}')
     // then
     expect(mobileMenuButton).toHaveFocus()
+  })
+
+
+  it('card_tabs_keep_board_layout_and_hide_back_button_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    await user.click(screen.getByRole('button', { name: '프로젝트2 User 보드' }))
+    expect(screen.getByRole('heading', { name: '프로젝트2', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '세로 배치' })).toHaveAttribute('aria-pressed', 'true')
+    // when
+    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(await screen.findByRole('button', { name: 'Team 카드 열기' }))
+    // then
+    expect(screen.getByRole('tab', { name: 'Team' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('button', { name: /돌아가기/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Team Markdown 문서' })).toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('tab', { name: 'User' }))
+    // then
+    expect(screen.getByRole('button', { name: '가로 배치' })).toHaveAttribute('aria-pressed', 'true')
+    // when
+    await user.click(screen.getByRole('button', { name: '필터' }))
+    // then
+    expect(screen.getByRole('searchbox', { name: '담당 멤버 검색' })).toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: '필터' }))
+    // then
+    expect(screen.queryByRole('searchbox', { name: '담당 멤버 검색' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '필터' }))
+    await user.click(screen.getByRole('tab', { name: '기간' }))
+    expect(screen.queryByRole('combobox', { name: '기간 기준' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('기간 시작')).toBeInTheDocument()
+    expect(screen.getByLabelText('기간 종료')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: '코드' }))
+    await user.type(screen.getByRole('searchbox', { name: '코드' }), 'PJT-12abc')
+    expect(screen.getByRole('searchbox', { name: '코드' })).toHaveValue('12')
+    expect(screen.getByText('PJT-', { exact: true })).toBeInTheDocument()
+    // when
+    await user.click(await screen.findByRole('button', { name: 'Team 카드 열기' }))
+    // then
+    expect(screen.getAllByRole('tab', { name: 'Team' })).toHaveLength(1)
   })
 
   it('refresh_today_at_seoul_midnight_ok', () => {

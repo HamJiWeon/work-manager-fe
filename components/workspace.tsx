@@ -2,12 +2,28 @@
 
 import {useEffect, useRef, useState} from 'react'
 import type {KeyboardEvent as ReactKeyboardEvent} from 'react'
-import {Activity, Check, ChevronRight, Folder, LayoutDashboard, PanelLeft, SquareKanban} from 'lucide-react'
+import {Activity, Check, Folder, LayoutDashboard, PanelLeft, SquareKanban, X} from 'lucide-react'
 import {ALL_PROJECTS, PROJECTS, createSampleTasks, getMillisecondsUntilNextSeoulDay, getMonthDays, getToday} from '@/lib/activity'
 import {ActivityCalendar} from './activity-calendar'
 import {CommonPage} from './common-page'
 import {ProjectList} from './project-list'
+import {CardPage} from './card-page'
 import {BoardList} from './board-list'
+import {SAMPLE_BOARD_ITEMS, type BoardItem} from '@/lib/board'
+import type {CardItem} from '@/lib/card'
+import {CardDocument} from './card-document'
+
+interface WorkspaceTab {
+    id: string
+    label: string
+    section: 'overview' | 'projects' | 'project' | 'common'
+    projectId: string
+    board: BoardItem | null
+    document: string | null
+    card?: CardItem
+}
+
+const HOME_TAB: WorkspaceTab = { id: 'overview', label: '워크스페이스', section: 'overview', projectId: ALL_PROJECTS, board: null, document: null }
 
 const FOCUSABLE_ELEMENT_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
 
@@ -16,6 +32,8 @@ const getFocusableElements = (container: HTMLElement) => Array.from(container.qu
 
 /** 프로젝트 탐색과 활동 조회를 제공한다. 데이터는 API 연결 전의 예시다. */
 export function Workspace({today: initialToday}: { today: string }) {
+    const [tabs, setTabs] = useState<WorkspaceTab[]>([HOME_TAB])
+    const [activeTabId, setActiveTabId] = useState(HOME_TAB.id)
     const [projectId, setProjectId] = useState(ALL_PROJECTS)
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -24,6 +42,7 @@ export function Workspace({today: initialToday}: { today: string }) {
     const [today, setToday] = useState(initialToday)
     const [selectedDate, setSelectedDate] = useState<string | null>(initialToday)
     const [section, setSection] = useState<'overview' | 'projects' | 'project' | 'common'>('overview')
+    const [selectedBoard, setSelectedBoard] = useState<BoardItem | null>(null)
     const [document, setDocument] = useState<string | null>(null)
     const [month, setMonth] = useState(initialToday.slice(0, 7))
     const days = getMonthDays(month)
@@ -32,6 +51,8 @@ export function Workspace({today: initialToday}: { today: string }) {
     tasks.forEach(task => counts.set(task.date, (counts.get(task.date) ?? 0) + 1))
     const selectedTasks = tasks.filter(task => task.date === selectedDate)
     const selectedProject = PROJECTS.find(project => project.id === projectId)
+    const activeCard = tabs.find(tab => tab.id === activeTabId)?.card
+    const [cardLayout, setCardLayout] = useState<'vertical' | 'horizontal'>('vertical')
     const isProjectPage = section === 'project' || section === 'common'
     useEffect(() => {
         if (mobileMenuOpen && sidebar.current) getFocusableElements(sidebar.current)[0]?.focus()
@@ -74,35 +95,44 @@ export function Workspace({today: initialToday}: { today: string }) {
             firstElement.focus()
         }
     }
+    const handleActivateTab = (tab: WorkspaceTab) => {
+        handleMobileMenuClose()
+        setActiveTabId(tab.id)
+        setProjectId(tab.projectId)
+        setSection(tab.section)
+        setSelectedBoard(tab.board)
+        setDocument(tab.document)
+    }
+    const handleOpenTab = (tab: WorkspaceTab) => {
+        setTabs(current => current.some(item => item.id === tab.id) ? current : [...current, tab])
+        handleActivateTab(tab)
+    }
+    const handleCloseTab = (tabId: string) => {
+        const remaining = tabs.filter(tab => tab.id !== tabId)
+        setTabs(remaining)
+        if (activeTabId === tabId) handleActivateTab(remaining.at(-1) ?? HOME_TAB)
+    }
     const handleProjectOpen = (id: string) => {
-        handleMobileMenuClose()
-        setProjectId(id);
-        setDocument(null);
-        setSection('project')
+        handleOpenTab({ id: `project:${id}`, label: PROJECTS.find(project => project.id === id)?.name ?? id, section: 'project', projectId: id, board: null, document: null })
     }
-    const handleProjectChange = (id: string) => {
-        handleMobileMenuClose()
-        setProjectId(id);
-        setDocument(null);
-        setSection('overview')
+    const handleProjectChange = (value: string) => {
+        handleOpenTab({ ...HOME_TAB, id: value === ALL_PROJECTS ? HOME_TAB.id : `overview:${value}`, label: value === ALL_PROJECTS ? HOME_TAB.label : `${PROJECTS.find(project => project.id === value)?.name} 작업 현황`, projectId: value })
     }
-
     const handleMonthChange = (value: string) => {
-        setMonth(value);
+        setMonth(value)
         setSelectedDate(null)
     }
     const handleProjectsOpen = () => {
-        handleMobileMenuClose()
-        setSection('projects');
-        setDocument(null)
+        handleOpenTab({ id: 'projects', label: '프로젝트 리스트', section: 'projects', projectId: ALL_PROJECTS, board: null, document: null })
+    }
+    const handleBoardOpen = (board: BoardItem, boardProjectId = projectId) => {
+        handleOpenTab({ id: `board:${boardProjectId}:${board.id}`, label: board.name, section: 'project', projectId: boardProjectId, board, document: null })
     }
     const handleCommonOpen = () => {
-        setSection('common');
-        setDocument(null)
+        handleOpenTab({ id: `common:${projectId}`, label: `${selectedProject?.name} Workspace`, section: 'common', projectId, board: null, document: null })
     }
     const handleDocumentOpen = (name: string) => {
-        setSection('common');
-        setDocument(name)
+        handleOpenTab({ id: `document:${projectId}:${name}`, label: name, section: 'common', projectId, board: null, document: name })
     }
 
     return <div className={`workspace ${sidebarOpen ? '' : 'sidebar-hidden'} ${mobileMenuOpen ? 'mobile-menu-open' : ''}`} onKeyDown={handleWorkspaceKeyDown}>
@@ -121,10 +151,10 @@ export function Workspace({today: initialToday}: { today: string }) {
                 </button></h2>
                 {PROJECTS.map(project => <details open key={project.id}>
                     <summary><Folder size={15}/><span>{project.name}</span></summary>
-                    <button
-                        className={`nav-item board-link ${projectId === project.id && section === 'project' ? 'active' : ''}`}
-                        onClick={() => handleProjectOpen(project.id)}><SquareKanban
-                        size={15}/>보드{project.id.slice(-1)}</button>
+                    {SAMPLE_BOARD_ITEMS.map(board => <button key={board.id}
+                        className={`nav-item board-link ${projectId === project.id && selectedBoard?.id === board.id && section === 'project' ? 'active' : ''}`}
+                        aria-label={`${project.name} ${board.name} 보드`}
+                        onClick={() => handleBoardOpen(board, project.id)}><SquareKanban size={15}/>{board.name}</button>)}
                 </details>)}
             </section>
 
@@ -139,26 +169,28 @@ export function Workspace({today: initialToday}: { today: string }) {
                 </button>
                 <button ref={mobileMenuButton} className="icon-button mobile-sidebar-toggle" aria-label={mobileMenuOpen ? '모바일 메뉴 접기' : '모바일 메뉴 열기'} aria-expanded={mobileMenuOpen} aria-controls="workspace-sidebar" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}><PanelLeft size={18}/></button>
                 <span className="topbar-divider"/>
-                <nav className="breadcrumbs" aria-label="현재 위치">
-                    <button className="breadcrumb-button" onClick={() => handleProjectChange(ALL_PROJECTS)}>워크스페이스</button>
-                    <ChevronRight size={13} aria-hidden="true"/>
-                    {section === 'common' ? <>
-                        <button className="breadcrumb-button" onClick={handleCommonOpen} aria-current={!document ? 'page' : undefined}>Common</button>
-                        {document && <><ChevronRight size={13} aria-hidden="true"/><span aria-current="page">{document.replace(/\.md$/i, '')}</span></>}
-                    </> : <span aria-current="page">{section === 'projects' ? '프로젝트 리스트' : section === 'project' ? selectedProject?.name : '작업 현황'}</span>}
-                </nav>
+                <div className="workspace-tabs" role="tablist" aria-label="열린 화면">
+                    {tabs.map(tab => <div className={`workspace-tab ${activeTabId === tab.id ? 'active' : ''}`} key={tab.id}>
+                        <button id={`tab-${tab.id}`} role="tab" aria-selected={activeTabId === tab.id} aria-controls="workspace-panel" onClick={() => handleActivateTab(tab)}><Folder size={15} aria-hidden="true" />{tab.label}</button>
+                        {tab.id !== HOME_TAB.id && <button className="workspace-tab-close" aria-label={`${tab.label} 탭 닫기`} onClick={() => handleCloseTab(tab.id)}><X size={13} aria-hidden="true" /></button>}
+                    </div>)}
+                </div>
             </header>
-            <main className={isProjectPage ? 'project-detail-page' : undefined}>
-                {isProjectPage && <div className="project-context"><button className="common-back" onClick={handleProjectsOpen}>프로젝트 리스트로 돌아가기</button><h1>{selectedProject?.name}</h1></div>}
-                {isProjectPage && !document && <nav className="list-switcher" aria-label="프로젝트 메뉴 선택">
+            <main id="workspace-panel" role="tabpanel" aria-labelledby={`tab-${activeTabId}`} className={isProjectPage ? 'project-detail-page' : undefined}>
+                {isProjectPage && <div className="project-context"><h1>{selectedProject?.name}</h1></div>}
+                {isProjectPage && !document && !activeCard && <nav className="list-switcher" aria-label="프로젝트 메뉴 선택">
                     <button aria-current={section === 'project' ? 'page' : undefined}
                             onClick={() => handleProjectOpen(projectId)}>PROJECT
                     </button>
                     <button aria-current={section === 'common' ? 'page' : undefined} onClick={handleCommonOpen}>WORKSPACE
                     </button>
                 </nav>}
-                {section === 'projects' ? <ProjectList onOpenProject={handleProjectOpen}/> : section === 'common' ?
-                    <CommonPage document={document} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen}/> : section === 'project' ? <BoardList projectId={projectId}/> : <>
+                {tabs.filter(tab => tab.board && !tab.card).map(tab => <div key={tab.id} hidden={activeTabId !== tab.id}>
+                    <CardPage boardId={`${tab.projectId}-${tab.board!.id}`} boardName={tab.board!.name} layout={cardLayout} onLayoutChange={setCardLayout}
+                        onOpenCard={card => handleOpenTab({ id: `card:${card.boardId}:${card.id}`, label: card.title, section: 'project', projectId: tab.projectId, board: tab.board, document: null, card })}/>
+                </div>)}
+                {activeCard ? <CardDocument key={activeCard.id} card={activeCard} hideBackButton onClose={() => {}} onSave={saved => setTabs(current => current.map(tab => tab.card?.id === activeCard.id ? { ...tab, label: saved.title, card: { ...tab.card, ...saved } } : tab))}/> : section === 'projects' ? <ProjectList onOpenProject={handleProjectOpen}/> : section === 'common' ?
+                    <CommonPage projectId={projectId} document={document} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen}/> : section === 'project' ? <>{selectedBoard ? null : <BoardList projectId={projectId} onOpenBoard={board => handleBoardOpen(board)}/>}</> : <>
                         <div className="page-heading">
                             <div>
                                 <div className="eyebrow">WORKSPACE OVERVIEW</div>
