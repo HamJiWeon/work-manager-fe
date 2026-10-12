@@ -9,6 +9,24 @@ const CARD: CardItem = { id: 'one', boardId: 'board', cardNumber: 1, memberName:
 beforeEach(() => localStorage.clear())
 
 describe('card_markdown', () => {
+  it.each(['spec.md', 'spec.MD'])('preserve_markdown_suffix_in_card_title_ok_%#', async (title) => {
+    // given
+    const user = userEvent.setup()
+    const view = render(<CardDocument card={{ ...CARD, title }} onClose={vi.fn()} />)
+    // then
+    expect(screen.getByRole('heading', { name: title, level: 1 })).toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: '편집' }))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    // then
+    expect(screen.getByRole('heading', { name: title, level: 1 })).toBeInTheDocument()
+    // when
+    view.unmount()
+    render(<CardDocument card={CARD} onClose={vi.fn()} />)
+    // then
+    expect(screen.getByRole('heading', { name: title, level: 1 })).toBeInTheDocument()
+  })
+
   it('save_assignee_dates_and_preserve_after_body_edit_ok', async () => {
     // given
     const user = userEvent.setup()

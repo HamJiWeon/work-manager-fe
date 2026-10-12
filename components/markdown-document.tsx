@@ -50,7 +50,7 @@ export function MarkdownDocument({ initialDocument, readDocument, saveDocument, 
   return <>
     {!hideBackButton && <button className="common-back" onClick={onClose}>← {backLabel}</button>}
     <section className="card-document" aria-label={`${title} Markdown 문서`}>
-    <div className="card-document-heading"><div>{editing ? <><label className="sr-only" htmlFor="card-title">{titleLabel}</label><input id="card-title" className="card-document-title" value={draftTitle} onChange={event => setDraftTitle(event.target.value)} aria-invalid={error === '제목을 입력해 주세요.'} /></> : <h1 className="card-document-title">{title.replace(/\.md$/i, '')}</h1>}</div>
+    <div className="card-document-heading"><div>{editing ? <><label className="sr-only" htmlFor="card-title">{titleLabel}</label><input id="card-title" className="card-document-title" value={draftTitle} onChange={event => setDraftTitle(event.target.value)} aria-invalid={error === '제목을 입력해 주세요.'} /></> : <h1 className="card-document-title">{title}</h1>}</div>
       <div className="card-document-actions">{editing ? <><button onClick={handleCancel}>취소</button><button className="card-document-save" onClick={() => handleSave(draft)}>저장</button></> : <button onClick={() => setEditing(true)}>편집</button>}</div>
     </div>
     {editing ? <><label className="sr-only" htmlFor="card-markdown">Markdown 작성</label>
