@@ -190,7 +190,7 @@ export function Workspace({today: initialToday}: { today: string }) {
                 </div>)}
                 {tabs.filter(tab => tab.card || tab.document).map(tab => <div key={tab.id} hidden={activeTabId !== tab.id}>
                     {tab.card ? <CardDocument card={tab.card} hideBackButton onClose={() => {}} onSave={saved => setTabs(current => current.map(item => item.id === tab.id && item.card ? { ...item, label: saved.title, card: { ...item.card, ...saved } } : item))}/> :
-                        <CommonPage projectId={tab.projectId} document={tab.document} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen}/>}
+                        <CommonPage projectId={tab.projectId} document={tab.document} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen} onSave={saved => setTabs(current => current.map(item => item.id === tab.id ? { ...item, label: `${saved.title.replace(/\.md$/i, '')}.md` } : item))}/>}
                 </div>)}
                 {activeCard || document ? null : section === 'projects' ? <ProjectList onOpenProject={handleProjectOpen}/> : section === 'common' ?
                     <CommonPage projectId={projectId} document={null} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen}/> : section === 'project' ? <>{selectedBoard ? null : <BoardList projectId={projectId} onOpenBoard={board => handleBoardOpen(board)}/>}</> : <>

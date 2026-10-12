@@ -13,6 +13,29 @@ async function openProject(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('workspace', () => {
+  it('common_document_save_updates_own_tab_label_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    await openProject(user)
+    await user.click(screen.getByRole('button', { name: 'WORKSPACE' }))
+    await user.click(screen.getByRole('button', { name: /0720 회의록.md/ }))
+    // when
+    await user.clear(screen.getByRole('textbox', { name: '문서 제목' }))
+    await user.type(screen.getByRole('textbox', { name: '문서 제목' }), '회의 정리')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    // then
+    expect(screen.getByRole('tab', { name: '회의 정리.md' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel', { name: '회의 정리.md' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '회의 정리.md 탭 닫기' })).toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('tab', { name: '프로젝트1 Workspace' }))
+    await user.click(within(screen.getByRole('tabpanel', { name: '프로젝트1 Workspace' })).getByRole('button', { name: /회의 정리.md/ }))
+    // then
+    expect(screen.getAllByRole('tab', { name: '회의 정리.md' })).toHaveLength(1)
+    expect(screen.getByRole('heading', { name: '회의 정리' })).toBeInTheDocument()
+  })
+
   it.each(['card', 'common'])('document_tabs_preserve_unsaved_drafts_ok_%s', async (kind) => {
     // given
     const user = userEvent.setup()
