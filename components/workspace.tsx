@@ -52,7 +52,6 @@ export function Workspace({today: initialToday}: { today: string }) {
     const selectedTasks = tasks.filter(task => task.date === selectedDate)
     const selectedProject = PROJECTS.find(project => project.id === projectId)
     const activeCard = tabs.find(tab => tab.id === activeTabId)?.card
-    const [cardLayout, setCardLayout] = useState<'vertical' | 'horizontal'>('vertical')
     const isProjectPage = section === 'project' || section === 'common'
     useEffect(() => {
         if (mobileMenuOpen && sidebar.current) getFocusableElements(sidebar.current)[0]?.focus()
@@ -186,7 +185,7 @@ export function Workspace({today: initialToday}: { today: string }) {
                     </button>
                 </nav>}
                 {tabs.filter(tab => tab.board && !tab.card).map(tab => <div key={tab.id} hidden={activeTabId !== tab.id}>
-                    <CardPage boardId={`${tab.projectId}-${tab.board!.id}`} boardName={tab.board!.name} layout={cardLayout} onLayoutChange={setCardLayout}
+                    <CardPage boardId={`${tab.projectId}-${tab.board!.id}`} boardName={tab.board!.name}
                         onOpenCard={card => handleOpenTab({ id: `card:${card.boardId}:${card.id}`, label: card.title, section: 'project', projectId: tab.projectId, board: tab.board, document: null, card })}/>
                 </div>)}
                 {activeCard ? <CardDocument key={activeCard.id} card={activeCard} hideBackButton onClose={() => {}} onSave={saved => setTabs(current => current.map(tab => tab.card?.id === activeCard.id ? { ...tab, label: saved.title, card: { ...tab.card, ...saved } } : tab))}/> : section === 'projects' ? <ProjectList onOpenProject={handleProjectOpen}/> : section === 'common' ?

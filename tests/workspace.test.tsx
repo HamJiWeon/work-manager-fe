@@ -12,6 +12,26 @@ async function openProject(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('workspace', () => {
+  it('board_tabs_preserve_independent_layouts_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    await user.click(screen.getByRole('button', { name: '프로젝트1 User 보드' }))
+    // when
+    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(screen.getByRole('button', { name: '프로젝트2 Team 보드' }))
+    // then
+    expect(screen.getByRole('button', { name: '세로 배치' })).toHaveAttribute('aria-pressed', 'true')
+    // when
+    await user.click(screen.getByRole('tab', { name: 'User' }))
+    // then
+    expect(screen.getByRole('button', { name: '가로 배치' })).toHaveAttribute('aria-pressed', 'true')
+    // when
+    await user.click(screen.getByRole('tab', { name: 'Team' }))
+    // then
+    expect(screen.getByRole('button', { name: '세로 배치' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('switch_and_close_screen_tabs_without_back_buttons_ok', async () => {
     // given
     const user = userEvent.setup()
