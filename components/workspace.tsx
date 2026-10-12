@@ -188,8 +188,12 @@ export function Workspace({today: initialToday}: { today: string }) {
                     <CardPage boardId={`${tab.projectId}-${tab.board!.id}`} boardName={tab.board!.name}
                         onOpenCard={card => handleOpenTab({ id: `card:${card.boardId}:${card.id}`, label: card.title, section: 'project', projectId: tab.projectId, board: tab.board, document: null, card })}/>
                 </div>)}
-                {activeCard ? <CardDocument key={activeCard.id} card={activeCard} hideBackButton onClose={() => {}} onSave={saved => setTabs(current => current.map(tab => tab.card?.id === activeCard.id ? { ...tab, label: saved.title, card: { ...tab.card, ...saved } } : tab))}/> : section === 'projects' ? <ProjectList onOpenProject={handleProjectOpen}/> : section === 'common' ?
-                    <CommonPage projectId={projectId} document={document} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen}/> : section === 'project' ? <>{selectedBoard ? null : <BoardList projectId={projectId} onOpenBoard={board => handleBoardOpen(board)}/>}</> : <>
+                {tabs.filter(tab => tab.card || tab.document).map(tab => <div key={tab.id} hidden={activeTabId !== tab.id}>
+                    {tab.card ? <CardDocument card={tab.card} hideBackButton onClose={() => {}} onSave={saved => setTabs(current => current.map(item => item.id === tab.id && item.card ? { ...item, label: saved.title, card: { ...item.card, ...saved } } : item))}/> :
+                        <CommonPage projectId={tab.projectId} document={tab.document} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen}/>}
+                </div>)}
+                {activeCard || document ? null : section === 'projects' ? <ProjectList onOpenProject={handleProjectOpen}/> : section === 'common' ?
+                    <CommonPage projectId={projectId} document={null} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen}/> : section === 'project' ? <>{selectedBoard ? null : <BoardList projectId={projectId} onOpenBoard={board => handleBoardOpen(board)}/>}</> : <>
                         <div className="page-heading">
                             <div>
                                 <div className="eyebrow">WORKSPACE OVERVIEW</div>

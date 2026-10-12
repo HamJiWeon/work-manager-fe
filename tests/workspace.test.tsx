@@ -1,9 +1,10 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Workspace } from '@/components/workspace'
 
 const TODAY = '2026-09-09'
+beforeEach(() => localStorage.clear())
 
 async function openProject(user: ReturnType<typeof userEvent.setup>) {
   const sidebar = screen.getByRole('complementary', { name: '워크스페이스 탐색' })
@@ -12,6 +13,40 @@ async function openProject(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('workspace', () => {
+  it.each(['card', 'common'])('document_tabs_preserve_unsaved_drafts_ok_%s', async (kind) => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    await openProject(user)
+    if (kind === 'card') {
+      await user.click(screen.getByRole('button', { name: /User 사용자 정보/ }))
+      await user.click(await screen.findByRole('button', { name: 'Team 카드 열기' }))
+      await user.click(screen.getByRole('button', { name: '편집' }))
+    } else {
+      await user.click(screen.getByRole('button', { name: 'WORKSPACE' }))
+      await user.click(screen.getByRole('button', { name: /0720 회의록.md/ }))
+    }
+    const titleLabel = kind === 'card' ? '카드 제목' : '문서 제목'
+    const tabLabel = kind === 'card' ? 'Team' : '0720 회의록.md'
+    // when
+    await user.clear(screen.getByRole('textbox', { name: titleLabel }))
+    await user.type(screen.getByRole('textbox', { name: titleLabel }), '미저장 제목')
+    await user.clear(screen.getByRole('textbox', { name: 'Markdown 작성' }))
+    await user.type(screen.getByRole('textbox', { name: 'Markdown 작성' }), '미저장 본문')
+    await user.click(screen.getByRole('tab', { name: '워크스페이스' }))
+    // then
+    expect(screen.queryByRole('textbox', { name: 'Markdown 작성' })).not.toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('tab', { name: tabLabel }))
+    // then
+    expect(screen.getByRole('textbox', { name: titleLabel })).toHaveValue('미저장 제목')
+    expect(screen.getByRole('textbox', { name: 'Markdown 작성' })).toHaveValue('미저장 본문')
+    // when
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    // then
+    expect(screen.getByRole('heading', { name: '미저장 제목' })).toBeInTheDocument()
+  })
+
   it('board_tabs_preserve_independent_layouts_ok', async () => {
     // given
     const user = userEvent.setup()
