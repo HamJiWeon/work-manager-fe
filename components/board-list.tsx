@@ -1,21 +1,31 @@
-import { List, FileText } from 'lucide-react'
-import { SAMPLE_BOARD_ITEMS, type BoardItem } from '@/lib/board'
+import { Folder, FileText } from 'lucide-react'
+import type { BoardItem } from '@/lib/board'
+import { BoardCreateDialog } from './board-create-dialog'
 
 interface BoardListProps {
-  projectId: string
+  boards: BoardItem[]
+  onCreateBoard: (board: BoardItem) => void
   onOpenBoard: (board: BoardItem) => void
 }
 
-/** 프로젝트 보드의 화면 초안을 더미 작업 목록으로 표시한다. */
-export function BoardList({ projectId, onOpenBoard }: BoardListProps) {
+const COMPLETED_PROGRESS = 100
+
+/** 완료 보드를 기존 순서를 유지해 하단에 표시하고 보드 생성과 탐색을 제공한다. */
+export function BoardList({ boards, onCreateBoard, onOpenBoard }: BoardListProps) {
+  const orderedBoards = [
+    ...boards.filter(board => board.progress < COMPLETED_PROGRESS),
+    ...boards.filter(board => board.progress >= COMPLETED_PROGRESS),
+  ]
   return <>
-    <div className="page-heading"><div><div className="eyebrow">PROJECT / BOARD</div><h2 className="project-overview-title">보드{projectId.slice(-1)}</h2><p>프로젝트에서 진행할 작업을 확인하세요.</p></div></div>
     <section className="common-documents" aria-labelledby="board-list-heading">
-      <div className="section-heading"><h2 id="board-list-heading"><List size={18} />작업 리스트</h2><span className="count-badge">{SAMPLE_BOARD_ITEMS.length}</span><span className="sample-badge">예시 데이터</span></div>
-      <ul className="board-list">{SAMPLE_BOARD_ITEMS.map(item => <li key={item.id}><button className="board-open" onClick={() => onOpenBoard(item)}>
+      <div className="section-heading"><h2 id="board-list-heading"><Folder size={18} />보드</h2><span className="count-badge">{boards.length}</span><BoardCreateDialog onCreateBoard={onCreateBoard} /></div>
+      <ul className="board-list">{orderedBoards.map(item => <li key={item.id} className={item.progress >= COMPLETED_PROGRESS ? 'board-completed' : undefined}><button className="board-open" onClick={() => onOpenBoard(item)}>
         <span className="document-icon"><FileText size={19} /></span>
         <div className="board-item-content"><h3>{item.name}</h3><p>{item.description}</p></div>
-        <span className={`board-status ${item.status === '완료' ? 'done' : item.status === '진행 중' ? 'in-progress' : 'todo'}`}>{item.status}</span>
+        <span className="board-progress">
+          <progress className="board-progress-bar" aria-label={`${item.name} 진행률`} value={item.progress} max={100}>{item.progress}%</progress>
+          <strong className="board-progress-value">{item.progress}%</strong>
+        </span>
       </button></li>)}</ul>
     </section>
   </>

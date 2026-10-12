@@ -1,7 +1,7 @@
 "use client"
 
 import { useSyncExternalStore } from 'react'
-import { ChevronRight, FileText, Folder } from 'lucide-react'
+import { ChevronRight, FileText, List } from 'lucide-react'
 import { MarkdownDocument } from '@/components/markdown-document'
 import { readWorkspaceDocument, saveWorkspaceDocument, WORKSPACE_DOCUMENT_CHANGE_EVENT } from '@/lib/workspace-document'
 import type { SavedCardDocument } from '@/lib/card-document'
@@ -42,10 +42,9 @@ export function CommonPage({ projectId, document, onOpenDocument, onBack, onSave
   }
 
   return <>
-    <div className="page-heading"><div><div className="eyebrow">WORKSPACE / COMMON</div><h2 className="project-overview-title">Common</h2><p>회의록과 공통 문서를 한곳에서 확인하세요.</p></div></div>
     <section className="common-documents" aria-labelledby="common-documents-heading">
-      <div className="section-heading"><h2 id="common-documents-heading"><Folder size={17} />공통 문서</h2><span className="count-badge">{COMMON_DOCUMENTS.length}</span></div>
-      <ul className="common-list">
+      <div className="section-heading"><h2 id="common-documents-heading"><List size={17} />공통 문서</h2><span className="count-badge">{COMMON_DOCUMENTS.length}</span></div>
+      <ul className="common-list workspace-document-list">
         {COMMON_DOCUMENTS.map((item, index) => <li key={item.name}>
           <button className="common-document" onClick={() => onOpenDocument(item.name)}>
             <span className="document-icon"><FileText size={19} /></span>
