@@ -39,6 +39,7 @@ export function Workspace({today: initialToday}: { today: string }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const mobileMenuButton = useRef<HTMLButtonElement>(null)
     const sidebar = useRef<HTMLElement>(null)
+    const tabButtons = useRef<Record<string, HTMLButtonElement | null>>({})
     const [today, setToday] = useState(initialToday)
     const [selectedDate, setSelectedDate] = useState<string | null>(initialToday)
     const [section, setSection] = useState<'overview' | 'projects' | 'project' | 'common'>('overview')
@@ -109,7 +110,28 @@ export function Workspace({today: initialToday}: { today: string }) {
     const handleCloseTab = (tabId: string) => {
         const remaining = tabs.filter(tab => tab.id !== tabId)
         setTabs(remaining)
-        if (activeTabId === tabId) handleActivateTab(remaining.at(-1) ?? HOME_TAB)
+        const index = tabs.findIndex(tab => tab.id === tabId)
+        const next = remaining[Math.min(index, remaining.length - 1)] ?? HOME_TAB
+        if (activeTabId === tabId) handleActivateTab(next)
+        tabButtons.current[activeTabId === tabId ? next.id : activeTabId]?.focus()
+    }
+    const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, tab: WorkspaceTab) => {
+        const index = tabs.findIndex(item => item.id === tab.id)
+        let nextIndex: number
+        switch (event.key) {
+            case 'ArrowRight': nextIndex = (index + 1) % tabs.length; break
+            case 'ArrowLeft': nextIndex = (index - 1 + tabs.length) % tabs.length; break
+            case 'Home': nextIndex = 0; break
+            case 'End': nextIndex = tabs.length - 1; break
+            case 'Delete':
+                if (tab.id !== HOME_TAB.id) { event.preventDefault(); handleCloseTab(tab.id) }
+                return
+            default: return
+        }
+        event.preventDefault()
+        const next = tabs[nextIndex]
+        handleActivateTab(next)
+        tabButtons.current[next.id]?.focus()
     }
     const handleProjectOpen = (id: string) => {
         handleOpenTab({ id: `project:${id}`, label: PROJECTS.find(project => project.id === id)?.name ?? id, section: 'project', projectId: id, board: null, document: null })
@@ -170,8 +192,8 @@ export function Workspace({today: initialToday}: { today: string }) {
                 <span className="topbar-divider"/>
                 <div className="workspace-tabs" role="tablist" aria-label="열린 화면">
                     {tabs.map(tab => <div className={`workspace-tab ${activeTabId === tab.id ? 'active' : ''}`} key={tab.id}>
-                        <button id={`tab-${encodeURIComponent(tab.id)}`} role="tab" aria-selected={activeTabId === tab.id} aria-controls="workspace-panel" onClick={() => handleActivateTab(tab)}><Folder size={15} aria-hidden="true" />{tab.label}</button>
-                        {tab.id !== HOME_TAB.id && <button className="workspace-tab-close" aria-label={`${tab.label} 탭 닫기`} onClick={() => handleCloseTab(tab.id)}><X size={13} aria-hidden="true" /></button>}
+                        <button ref={element => { tabButtons.current[tab.id] = element }} id={`tab-${encodeURIComponent(tab.id)}`} role="tab" tabIndex={activeTabId === tab.id ? 0 : -1} aria-selected={activeTabId === tab.id} aria-controls="workspace-panel" onKeyDown={event => handleTabKeyDown(event, tab)} onClick={() => handleActivateTab(tab)}><Folder size={15} aria-hidden="true" />{tab.label}</button>
+                        {tab.id !== HOME_TAB.id && <button tabIndex={-1} className="workspace-tab-close" aria-label={`${tab.label} 탭 닫기`} onClick={() => handleCloseTab(tab.id)}><X size={13} aria-hidden="true" /></button>}
                     </div>)}
                 </div>
             </header>

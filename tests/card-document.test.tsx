@@ -9,6 +9,27 @@ const CARD: CardItem = { id: 'one', boardId: 'board', cardNumber: 1, memberName:
 beforeEach(() => localStorage.clear())
 
 describe('card_markdown', () => {
+  it('assignee_change_updates_list_avatar_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="avatar-board" />)
+    await user.click(await screen.findByRole('button', { name: 'Team 카드 열기' }))
+    // when
+    await user.click(screen.getByRole('button', { name: '담당자 변경' }))
+    await user.selectOptions(screen.getByRole('combobox', { name: '담당자' }), '이서연')
+    await user.click(screen.getByRole('button', { name: '← 카드 목록으로 돌아가기' }))
+    // then
+    const card = screen.getByRole('button', { name: 'Team 카드 열기' })
+    expect(within(card).getByRole('img', { name: '이서연 프로필 사진' }).getAttribute('src')).toContain('member-2.svg')
+    // when
+    await user.click(card)
+    await user.click(screen.getByRole('button', { name: '담당자 변경' }))
+    await user.selectOptions(screen.getByRole('combobox', { name: '담당자' }), '')
+    await user.click(screen.getByRole('button', { name: '← 카드 목록으로 돌아가기' }))
+    // then
+    expect(within(screen.getByRole('button', { name: 'Team 카드 열기' })).getByRole('img', { name: '미지정 프로필 사진' })).toHaveTextContent('–')
+  })
+
   it('multiple_document_editors_keep_independent_labels_ok', async () => {
     // given
     const user = userEvent.setup()

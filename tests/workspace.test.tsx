@@ -13,6 +13,38 @@ async function openProject(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('workspace', () => {
+  it('workspace_tabs_support_keyboard_navigation_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<Workspace today={TODAY} />)
+    await openProject(user)
+    const home = screen.getByRole('tab', { name: '워크스페이스' })
+    const projects = screen.getByRole('tab', { name: '프로젝트 리스트' })
+    const project = screen.getByRole('tab', { name: '프로젝트1' })
+    // then
+    expect(home).toHaveAttribute('tabindex', '-1')
+    expect(project).toHaveAttribute('tabindex', '0')
+    // when
+    await user.click(project)
+    await user.keyboard('{ArrowRight}')
+    // then
+    expect(home).toHaveFocus()
+    expect(home).toHaveAttribute('aria-selected', 'true')
+    // when
+    await user.keyboard('{ArrowLeft}')
+    // then
+    expect(project).toHaveFocus()
+    // when
+    await user.keyboard('{Home}{ArrowRight}')
+    // then
+    expect(projects).toHaveFocus()
+    // when
+    await user.keyboard('{End}{Delete}')
+    // then
+    expect(screen.queryByRole('tab', { name: '프로젝트1' })).not.toBeInTheDocument()
+    expect(projects).toHaveFocus()
+  })
+
   it('common_document_save_updates_own_tab_label_ok', async () => {
     // given
     const user = userEvent.setup()

@@ -29,6 +29,12 @@ export type CardPageLoader = (boardId: string, status: CardStatus, cursor: numbe
 const PAGE_SIZE = 8
 const SAMPLE_CARD_COUNT = 24
 const SAMPLE_MEMBER_NAMES = ['김민수', '이서연', '박지훈'] as const
+/** 예시 담당자의 프로필 경로를 반환하며, 사진이 없는 담당자는 이니셜 표시를 사용한다. */
+export function getMemberAvatarUrl(memberName: string): string | undefined {
+  if (memberName === '나') return '/avatars/member-1.svg'
+  const index = SAMPLE_MEMBER_NAMES.findIndex(name => name === memberName)
+  return index < 0 ? undefined : `/avatars/member-${index + 1}.svg`
+}
 const SAMPLE_PROJECT_CODE = 'PJT'
 const FIRST_CARDS: Record<CardStatus, { title: string; content: string }> = {
   NOT_STARTED: { title: 'Team', content: '팀 생성 및 멤버 관리' },

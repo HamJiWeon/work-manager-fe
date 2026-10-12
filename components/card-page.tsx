@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, ChevronDown, Columns3, Rows3 } from 'lucide-react'
 import type { DragEvent, FormEvent } from 'react'
-import { CARD_STATUSES, CARD_STATUS_LABELS, formatCardCode, formatCardDate, loadSampleCardPage } from '@/lib/card'
+import { CARD_STATUSES, CARD_STATUS_LABELS, formatCardCode, formatCardDate, getMemberAvatarUrl, loadSampleCardPage } from '@/lib/card'
 import type { CardItem, CardPageLoader, CardStatus } from '@/lib/card'
 import { useCardPages } from '@/hooks/use-card-pages'
 import { CardDocument } from '@/components/card-document'
@@ -16,6 +16,10 @@ import { useCardDocuments } from '@/hooks/use-card-documents'
 import { useCardMotion } from '@/hooks/use-card-motion'
 
 const CARD_MOVE_THRESHOLD = 0.35
+
+function CardMemberAvatar({ card }: { card: CardItem }) {
+  return card.memberAvatarUrl ? <Image className="card-member" src={card.memberAvatarUrl} alt={`${card.memberName} 프로필 사진`} title={card.memberName} width={28} height={28} /> : <span className="detail-member-avatar" role="img" aria-label={`${card.memberName || '미지정'} 프로필 사진`} title={card.memberName || '미지정'}>{card.memberName.slice(0, 1) || '–'}</span>
+}
 
 interface CardPageProps {
   boardId: string
@@ -69,7 +73,10 @@ function CardStatusSection({ boardId, status, loadPage, layout, order, movedCard
     ...items.filter(item => !movedCards[item.id]),
     ...createdCards.filter(item => item.status === status && !movedCards[item.id]),
     ...Object.values(movedCards).filter(item => item.boardId === boardId && item.status === status),
-  ].map(item => ({ ...item, ...documents[item.id] }))
+  ].map((item): CardItem => {
+    const saved = documents[item.id]
+    return { ...item, ...saved, memberAvatarUrl: saved?.memberName !== undefined ? getMemberAvatarUrl(saved.memberName) : item.memberAvatarUrl }
+  })
   const cardsById = new Map(availableItems.map(item => [item.id, item]))
   const visibleItems = [
     ...order.flatMap(id => cardsById.has(id) ? [cardsById.get(id)!] : []),
@@ -172,12 +179,12 @@ function CardStatusSection({ boardId, status, loadPage, layout, order, movedCard
         onDragOver={event => { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move' }}
         onDrop={event => { event.stopPropagation(); handleDrop(event) }}>
         <article className="work-card card-drop-preview" aria-label={`${item.title} 이동 미리보기`}>
-          <div className="card-select-button"><span className="card-topline"><strong className="card-project-code" aria-label="카드 코드">{formatCardCode(item)}</strong><span className="card-preview-caption">이 위치에 놓기</span></span><h4>{item.title}</h4><span className="card-metadata">{(item.startDate || item.endDate) && <span className="card-date-summary" aria-label="작업 기간"><span>{item.startDate ? <time dateTime={item.startDate}>{formatCardDate(item.startDate)}</time> : '시작일 미지정'}</span><span aria-hidden="true">~</span><span>{item.endDate ? <time dateTime={item.endDate}>{formatCardDate(item.endDate)}</time> : '종료일 미지정'}</span></span>}<Image className="card-member" src={item.memberAvatarUrl ?? "/avatars/member-1.svg"} alt={`${item.memberName} 프로필 사진`} title={item.memberName} width={28} height={28} /></span></div>
+          <div className="card-select-button"><span className="card-topline"><strong className="card-project-code" aria-label="카드 코드">{formatCardCode(item)}</strong><span className="card-preview-caption">이 위치에 놓기</span></span><h4>{item.title}</h4><span className="card-metadata">{(item.startDate || item.endDate) && <span className="card-date-summary" aria-label="작업 기간"><span>{item.startDate ? <time dateTime={item.startDate}>{formatCardDate(item.startDate)}</time> : '시작일 미지정'}</span><span aria-hidden="true">~</span><span>{item.endDate ? <time dateTime={item.endDate}>{formatCardDate(item.endDate)}</time> : '종료일 미지정'}</span></span>}<CardMemberAvatar card={item} /></span></div>
         </article>
       </li> : <li key={item.id} data-card-id={item.id} hidden={!!dropPreview && draggedCard?.id === item.id}
         onDragOver={handleDragOver} onDrop={handleDrop}><article className={`work-card ${selectedCard?.id === item.id ? 'selected' : ''} ${draggedCard?.id === item.id ? 'dragging' : ''}`} draggable
         onDragStart={event => { event.dataTransfer.setData('text/plain', item.id); event.dataTransfer.effectAllowed = 'move'; onDragCard(item) }}
-        onDragEnd={() => { onDragCard(null); onPreviewChange(null) }}><button className="card-select-button" aria-label={`${item.title} 카드 열기`} aria-pressed={selectedCard?.id === item.id} onClick={() => onOpenCard(item)} aria-keyshortcuts="Space" onKeyDown={event => { if (event.key === ' ') { event.preventDefault(); onSelectCard(item) } }}><span className="card-topline"><strong className="card-project-code" aria-label="카드 코드">{formatCardCode(item)}</strong></span><h4>{item.title}</h4><span className="card-metadata">{(item.startDate || item.endDate) && <span className="card-date-summary" aria-label="작업 기간"><span>{item.startDate ? <time dateTime={item.startDate}>{formatCardDate(item.startDate)}</time> : '시작일 미지정'}</span><span aria-hidden="true">~</span><span>{item.endDate ? <time dateTime={item.endDate}>{formatCardDate(item.endDate)}</time> : '종료일 미지정'}</span></span>}<Image className="card-member" src={item.memberAvatarUrl ?? "/avatars/member-1.svg"} alt={`${item.memberName} 프로필 사진`} title={item.memberName} width={28} height={28} /></span></button></article>
+        onDragEnd={() => { onDragCard(null); onPreviewChange(null) }}><button className="card-select-button" aria-label={`${item.title} 카드 열기`} aria-pressed={selectedCard?.id === item.id} onClick={() => onOpenCard(item)} aria-keyshortcuts="Space" onKeyDown={event => { if (event.key === ' ') { event.preventDefault(); onSelectCard(item) } }}><span className="card-topline"><strong className="card-project-code" aria-label="카드 코드">{formatCardCode(item)}</strong></span><h4>{item.title}</h4><span className="card-metadata">{(item.startDate || item.endDate) && <span className="card-date-summary" aria-label="작업 기간"><span>{item.startDate ? <time dateTime={item.startDate}>{formatCardDate(item.startDate)}</time> : '시작일 미지정'}</span><span aria-hidden="true">~</span><span>{item.endDate ? <time dateTime={item.endDate}>{formatCardDate(item.endDate)}</time> : '종료일 미지정'}</span></span>}<CardMemberAvatar card={item} /></span></button></article>
       </li>)}</ul>
       <div aria-live="polite">
         {loading && <p role="status">카드를 불러오는 중입니다.</p>}
