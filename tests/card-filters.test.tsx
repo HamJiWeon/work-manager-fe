@@ -4,6 +4,53 @@ import { describe, expect, it } from 'vitest'
 import { CardFilters } from '@/components/card-filters'
 
 describe('card_filters', () => {
+  it('navigate_vertical_tabs_with_keyboard_and_single_tab_stop_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardFilters />)
+    await user.click(screen.getByRole('button', { name: '필터' }))
+    const members = screen.getByRole('tab', { name: '담당 멤버' })
+    const period = screen.getByRole('tab', { name: '기간' })
+    const code = screen.getByRole('tab', { name: '코드' })
+    // when
+    await user.tab()
+    // then
+    expect(members).toHaveFocus()
+    expect(period).toHaveAttribute('tabindex', '-1')
+    expect(code).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical')
+    // when
+    await user.keyboard('{ArrowDown}')
+    // then
+    expect(period).toHaveFocus()
+    expect(period).toHaveAttribute('aria-selected', 'true')
+    expect(period).toHaveAttribute('tabindex', '0')
+    expect(members).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('tabpanel', { name: '기간' })).toBeInTheDocument()
+    // when
+    await user.keyboard('{End}{ArrowDown}')
+    // then
+    expect(members).toHaveFocus()
+    // when
+    await user.keyboard('{ArrowUp}')
+    // then
+    expect(code).toHaveFocus()
+    expect(screen.getByRole('tabpanel', { name: '코드' })).toBeInTheDocument()
+    // when
+    await user.keyboard('{Home}')
+    // then
+    expect(members).toHaveFocus()
+    // when
+    await user.keyboard('{End}')
+    // then
+    expect(code).toHaveFocus()
+    // when
+    await user.tab()
+    await user.tab({ shift: true })
+    // then
+    expect(code).toHaveFocus()
+  })
+
   it('search_select_clear_members_and_close_ok', async () => {
     // given
     const user = userEvent.setup()

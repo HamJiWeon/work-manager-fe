@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { CalendarDays, Hash, Search, SlidersHorizontal, Users, X } from 'lucide-react'
 
 const CARD_CODE_PREFIX = 'PJT-'
@@ -24,6 +24,7 @@ export function CardFilters() {
   const [code, setCode] = useState('')
   const root = useRef<HTMLElement>(null)
   const toggle = useRef<HTMLButtonElement>(null)
+  const tabs = useRef<Partial<Record<FilterField, HTMLButtonElement | null>>>({})
   const counts = { members: members.length, period: Number(Boolean(fromDate || toDate)), code: Number(Boolean(code)) }
   const conditionCount = Object.values(counts).filter(Boolean).length
   const visibleMembers = SAMPLE_MEMBERS.filter(name => name.includes(memberSearch.trim()))
@@ -47,6 +48,21 @@ export function CardFilters() {
     setCode('')
     setMemberSearch('')
   }
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, id: FilterField) => {
+    const index = FILTER_FIELDS.findIndex(item => item.id === id)
+    let nextIndex: number
+    switch (event.key) {
+      case 'ArrowDown': nextIndex = (index + 1) % FILTER_FIELDS.length; break
+      case 'ArrowUp': nextIndex = (index - 1 + FILTER_FIELDS.length) % FILTER_FIELDS.length; break
+      case 'Home': nextIndex = 0; break
+      case 'End': nextIndex = FILTER_FIELDS.length - 1; break
+      default: return
+    }
+    event.preventDefault()
+    const nextField = FILTER_FIELDS[nextIndex].id
+    setField(nextField)
+    tabs.current[nextField]?.focus()
+  }
   return <section ref={root} className="card-filter-popover" aria-label="카드 필터 예시" onKeyDown={event => {
     if (event.key === 'Escape') { setVisible(false); toggle.current?.focus() }
   }}>
@@ -57,7 +73,7 @@ export function CardFilters() {
     </div>
     {visible && <div id="card-filter-body" className="filter-panel">
       <div className="filter-panel-main">
-        <div className="filter-field-nav"><div role="tablist" aria-label="필터 조건">{FILTER_FIELDS.map(({ id, label, icon: Icon }) => <button key={id} id={`filter-tab-${id}`} role="tab" aria-selected={field === id} aria-controls={`filter-content-${id}`} onClick={() => setField(id)}><Icon size={16} aria-hidden="true" />{label}{counts[id] > 0 && <span className="filter-number">{counts[id]}</span>}</button>)}</div><button className="filter-clear-link" onClick={handleReset}>모두 지우기</button></div>
+        <div className="filter-field-nav"><div role="tablist" aria-label="필터 조건" aria-orientation="vertical">{FILTER_FIELDS.map(({ id, label, icon: Icon }) => <button key={id} ref={element => { tabs.current[id] = element }} id={`filter-tab-${id}`} role="tab" tabIndex={field === id ? 0 : -1} aria-selected={field === id} aria-controls={`filter-content-${id}`} onKeyDown={event => handleTabKeyDown(event, id)} onClick={() => setField(id)}><Icon size={16} aria-hidden="true" />{label}{counts[id] > 0 && <span className="filter-number">{counts[id]}</span>}</button>)}</div><button className="filter-clear-link" onClick={handleReset}>모두 지우기</button></div>
         <div className="filter-condition" role="tabpanel" id={`filter-content-${field}`} aria-labelledby={`filter-tab-${field}`}>
           <div className="filter-condition-body">
             {field === 'members' && <><label className="filter-search"><Search size={18} aria-hidden="true" /><input type="search" aria-label="담당 멤버 검색" placeholder="담당 멤버 검색" value={memberSearch} onChange={event => setMemberSearch(event.target.value)} /></label><div className="filter-members">{visibleMembers.map((name, index) => <label key={name} className={members.includes(name) ? 'checked' : ''}><input type="checkbox" checked={members.includes(name)} onChange={event => setMembers(current => event.target.checked ? [...current, name] : current.filter(member => member !== name))} /><span aria-hidden="true" className={`filter-member-avatar avatar-color-${index}`}>{name.slice(0, 1)}</span><span>{name}</span></label>)}{!visibleMembers.length && <p className="filter-empty">검색 결과가 없습니다.</p>}</div></>}
