@@ -9,6 +9,23 @@ const CARD: CardItem = { id: 'one', boardId: 'board', cardNumber: 1, memberName:
 beforeEach(() => localStorage.clear())
 
 describe('card_markdown', () => {
+  it('multiple_document_editors_keep_independent_labels_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<><CardDocument card={CARD} onClose={vi.fn()} /><CardDocument card={{ ...CARD, id: 'two', title: '두 번째' }} onClose={vi.fn()} /></>)
+    // when
+    for (const button of screen.getAllByRole('button', { name: '편집' })) await user.click(button)
+    // then
+    const documents = screen.getAllByRole('region', { name: /Markdown 문서/ })
+    const titles = documents.map(document => within(document).getByRole('textbox', { name: '카드 제목' }))
+    const bodies = documents.map(document => within(document).getByRole('textbox', { name: 'Markdown 작성' }))
+    expect(new Set([...titles, ...bodies].map(element => element.id)).size).toBe(4)
+    for (const document of documents) {
+      expect(within(document).getByLabelText('카드 제목')).toBe(within(document).getByRole('textbox', { name: '카드 제목' }))
+      expect(within(document).getByLabelText('Markdown 작성')).toBe(within(document).getByRole('textbox', { name: 'Markdown 작성' }))
+    }
+  })
+
   it.each(['spec.md', 'spec.MD'])('preserve_markdown_suffix_in_card_title_ok_%#', async (title) => {
     // given
     const user = userEvent.setup()
