@@ -8,6 +8,9 @@ function isCard(value: unknown): value is CardItem {
   if (typeof value !== 'object' || value === null) return false
   const card = value as Partial<CardItem>
   return typeof card.id === 'string' && typeof card.boardId === 'string' && typeof card.title === 'string' && typeof card.content === 'string' && typeof card.memberName === 'string' && typeof card.projectCode === 'string' && typeof card.cardNumber === 'number' && Number.isSafeInteger(card.cardNumber) && card.cardNumber > 0 && CARD_STATUSES.includes(card.status as CardStatus)
+    && (card.memberAvatarUrl === undefined || typeof card.memberAvatarUrl === 'string')
+    && (card.startDate === undefined || typeof card.startDate === 'string')
+    && (card.endDate === undefined || typeof card.endDate === 'string')
 }
 
 /** 보드에서 직접 추가한 카드를 복원한다. 손상된 데이터와 다른 보드의 항목은 제외한다. */
