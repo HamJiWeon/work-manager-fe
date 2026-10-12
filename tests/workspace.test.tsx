@@ -68,10 +68,15 @@ describe('workspace', () => {
     expect(screen.getByRole('heading', { name: '프로젝트1', level: 1 })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: '문서 제목' })).toHaveValue('0720 회의록')
     expect(screen.getByRole('textbox', { name: 'Markdown 작성' })).toBeInTheDocument()
+    expect(screen.getByRole('tabpanel', { name: '0720 회의록.md' })).toBeInTheDocument()
+    const documentTab = screen.getByRole('tab', { name: '0720 회의록.md' })
+    expect(documentTab.id).not.toMatch(/\s/)
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', documentTab.id)
     // when
     await user.click(screen.getByRole('tab', { name: '워크스페이스' }))
     // then
     expect(screen.getByRole('heading', { name: '작업 현황', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('tabpanel', { name: '워크스페이스' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: '프로젝트 메뉴 선택' })).not.toBeInTheDocument()
   })
 

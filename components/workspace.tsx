@@ -171,12 +171,12 @@ export function Workspace({today: initialToday}: { today: string }) {
                 <span className="topbar-divider"/>
                 <div className="workspace-tabs" role="tablist" aria-label="열린 화면">
                     {tabs.map(tab => <div className={`workspace-tab ${activeTabId === tab.id ? 'active' : ''}`} key={tab.id}>
-                        <button id={`tab-${tab.id}`} role="tab" aria-selected={activeTabId === tab.id} aria-controls="workspace-panel" onClick={() => handleActivateTab(tab)}><Folder size={15} aria-hidden="true" />{tab.label}</button>
+                        <button id={`tab-${encodeURIComponent(tab.id)}`} role="tab" aria-selected={activeTabId === tab.id} aria-controls="workspace-panel" onClick={() => handleActivateTab(tab)}><Folder size={15} aria-hidden="true" />{tab.label}</button>
                         {tab.id !== HOME_TAB.id && <button className="workspace-tab-close" aria-label={`${tab.label} 탭 닫기`} onClick={() => handleCloseTab(tab.id)}><X size={13} aria-hidden="true" /></button>}
                     </div>)}
                 </div>
             </header>
-            <main id="workspace-panel" role="tabpanel" aria-labelledby={`tab-${activeTabId}`} className={isProjectPage ? 'project-detail-page' : undefined}>
+            <main id="workspace-panel" role="tabpanel" aria-labelledby={`tab-${encodeURIComponent(activeTabId)}`} className={isProjectPage ? 'project-detail-page' : undefined}>
                 {isProjectPage && <div className="project-context"><h1>{selectedProject?.name}</h1></div>}
                 {isProjectPage && !document && !activeCard && <nav className="list-switcher" aria-label="프로젝트 메뉴 선택">
                     <button aria-current={section === 'project' ? 'page' : undefined}
