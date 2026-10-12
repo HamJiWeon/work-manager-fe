@@ -5,7 +5,12 @@ export const CARD_DOCUMENT_CHANGE_EVENT = 'work-manager:card-document-change'
 const STORAGE_PREFIX = 'work-manager:card-document:'
 
 function isSavedCardDocument(value: unknown): value is SavedCardDocument {
-  return typeof value === 'object' && value !== null && 'title' in value && typeof value.title === 'string' && 'content' in value && typeof value.content === 'string'
+  return typeof value === 'object' && value !== null
+    && 'title' in value && typeof value.title === 'string'
+    && 'content' in value && typeof value.content === 'string'
+    && (!('memberName' in value) || value.memberName === undefined || typeof value.memberName === 'string')
+    && (!('startDate' in value) || value.startDate === undefined || typeof value.startDate === 'string')
+    && (!('endDate' in value) || value.endDate === undefined || typeof value.endDate === 'string')
 }
 
 /** 저장된 제목과 본문을 읽고, 이전 버전의 본문만 저장된 문서는 기존 제목으로 복원한다. */

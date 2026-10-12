@@ -8,6 +8,46 @@ const CARD: CardItem = { id: 'one', boardId: 'board', cardNumber: 1, memberName:
 beforeEach(() => localStorage.clear())
 
 describe('card_storage', () => {
+  it.each(['memberName', 'startDate', 'endDate'])('reject_malformed_%s_metadata_ok', (field) => {
+    // given
+    const invalidValues = [123, null, true, {}, []]
+    for (const [index, value] of invalidValues.entries()) {
+      localStorage.setItem(`work-manager:card-document:board:invalid-${index}`, JSON.stringify({ title: '문서', content: '본문', [field]: value }))
+    }
+    localStorage.setItem('work-manager:card-document:board:one', JSON.stringify({ title: '문서', content: '본문', [field]: 123 }))
+    // when
+    const document = readCardDocument(CARD)
+    const documents = readBoardDocuments('board')
+    // then
+    expect(document).toBeNull()
+    expect(documents).toEqual({})
+  })
+
+  it.each([
+    { title: '문서', content: '본문' },
+    { title: '문서', content: '본문', memberName: '담당자', startDate: '2026-10-12', endDate: '2026-10-13' },
+    { title: '문서', content: '본문', memberName: '', startDate: '', endDate: '' },
+  ])('restore_valid_optional_metadata_ok_%#', (saved) => {
+    // given
+    localStorage.setItem('work-manager:card-document:board:one', JSON.stringify(saved))
+    // when
+    const document = readCardDocument(CARD)
+    const documents = readBoardDocuments('board')
+    // then
+    expect(document).toEqual(saved)
+    expect(documents).toEqual({ one: saved })
+  })
+
+  it('restore_legacy_when_optional_metadata_is_malformed_ok', () => {
+    // given
+    localStorage.setItem('work-manager:card-document:board:one', JSON.stringify({ title: '문서', content: '본문', memberName: 123 }))
+    localStorage.setItem('work-manager:card-markdown:board:one', '이전 본문')
+    // when
+    const document = readCardDocument(CARD)
+    // then
+    expect(document).toEqual({ title: CARD.title, content: '이전 본문' })
+  })
+
   it('restore_legacy_skip_corrupt_and_other_board_documents_ok', () => {
     // given
     localStorage.setItem('work-manager:card-document:board:one', '{broken')
@@ -34,6 +74,30 @@ describe('card_storage', () => {
     localStorage.setItem('any', 'value')
     expect(readBoardDocuments('board')).toEqual({})
     keys.mockRestore()
+  })
+
+  it.each(['memberAvatarUrl', 'startDate', 'endDate'])('created_cards_skip_malformed_%s_ok', (field) => {
+    // given
+    const invalidValues = [123, null, true, {}, []]
+    const corruptedCards = invalidValues.map((value, index) => ({ ...CARD, id: `invalid-${index}`, [field]: value }))
+    localStorage.setItem('work-manager:created-cards:board', JSON.stringify([...corruptedCards, CARD]))
+    // when
+    const cards = readCreatedCards('board')
+    // then
+    expect(cards).toEqual([CARD])
+  })
+
+  it.each([
+    CARD,
+    { ...CARD, memberAvatarUrl: '/avatars/member-1.svg', startDate: '2026-10-12', endDate: '2026-10-13' },
+    { ...CARD, memberAvatarUrl: '', startDate: '', endDate: '' },
+  ])('created_cards_restore_valid_optional_fields_ok_%#', (saved) => {
+    // given
+    localStorage.setItem('work-manager:created-cards:board', JSON.stringify([saved]))
+    // when
+    const cards = readCreatedCards('board')
+    // then
+    expect(cards).toEqual([saved])
   })
 
   it('created_cards_validate_data_and_allocate_unique_numbers_ok', () => {
