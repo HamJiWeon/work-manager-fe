@@ -38,7 +38,7 @@ export function CommonPage({ projectId, document, onOpenDocument, onBack, onSave
   const snapshot = useSyncExternalStore(subscribe, () => JSON.stringify(COMMON_DOCUMENTS.map(item => readWorkspaceDocument(projectId, item.name))), () => JSON.stringify(COMMON_DOCUMENTS.map(() => null)))
   const savedDocuments = JSON.parse(snapshot) as (SavedCardDocument | null)[]
   if (document) {
-    return <MarkdownDocument key={`${projectId}:${document}`} initialDocument={{ title: document.replace(/\.md$/i, ''), content: '' }} readDocument={() => readWorkspaceDocument(projectId, document)} saveDocument={value => saveWorkspaceDocument(projectId, document, value)} onSave={onSave} onClose={onBack} backLabel="공통 문서 목록" titleLabel="문서 제목" />
+    return <MarkdownDocument key={`${projectId}:${document}`} initialDocument={{ title: document.replace(/\.md$/i, ''), content: '' }} readDocument={() => readWorkspaceDocument(projectId, document)} saveDocument={value => saveWorkspaceDocument(projectId, document, value)} onSave={onSave} hideBackButton onClose={onBack} backLabel="공통 문서 목록" titleLabel="문서 제목" />
   }
 
   return <>
