@@ -35,6 +35,7 @@ export function Workspace({today: initialToday}: { today: string }) {
     const [tabs, setTabs] = useState<WorkspaceTab[]>([HOME_TAB])
     const [activeTabId, setActiveTabId] = useState(HOME_TAB.id)
     const [projectId, setProjectId] = useState(ALL_PROJECTS)
+    const [projectBoards, setProjectBoards] = useState<Record<string, BoardItem[]>>({})
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const mobileMenuButton = useRef<HTMLButtonElement>(null)
@@ -149,6 +150,9 @@ export function Workspace({today: initialToday}: { today: string }) {
     const handleBoardOpen = (board: BoardItem, boardProjectId = projectId) => {
         handleOpenTab({ id: `board:${boardProjectId}:${board.id}`, label: board.name, section: 'project', projectId: boardProjectId, board, document: null })
     }
+    const handleBoardCreate = (board: BoardItem) => {
+        setProjectBoards(current => ({ ...current, [projectId]: [...(current[projectId] ?? SAMPLE_BOARD_ITEMS), board] }))
+    }
     const handleCommonOpen = () => {
         handleOpenTab({ id: `common:${projectId}`, label: `${selectedProject?.name} Workspace`, section: 'common', projectId, board: null, document: null })
     }
@@ -172,7 +176,7 @@ export function Workspace({today: initialToday}: { today: string }) {
                 </button></h2>
                 {PROJECTS.map(project => <details open key={project.id}>
                     <summary><Folder size={15}/><span>{project.name}</span></summary>
-                    {SAMPLE_BOARD_ITEMS.map(board => <button key={board.id}
+                    {(projectBoards[project.id] ?? SAMPLE_BOARD_ITEMS).map(board => <button key={board.id}
                         className={`nav-item board-link ${projectId === project.id && selectedBoard?.id === board.id && section === 'project' ? 'active' : ''}`}
                         aria-label={`${project.name} ${board.name} 보드`}
                         onClick={() => handleBoardOpen(board, project.id)}><SquareKanban size={15}/>{board.name}</button>)}
@@ -201,7 +205,7 @@ export function Workspace({today: initialToday}: { today: string }) {
                 {isProjectPage && <div className="project-context"><h1>{selectedProject?.name}</h1></div>}
                 {isProjectPage && !document && !activeCard && <nav className="list-switcher" aria-label="프로젝트 메뉴 선택">
                     <button aria-current={section === 'project' ? 'page' : undefined}
-                            onClick={() => handleProjectOpen(projectId)}>PROJECT
+                            onClick={() => handleProjectOpen(projectId)}>BOARD
                     </button>
                     <button aria-current={section === 'common' ? 'page' : undefined} onClick={handleCommonOpen}>WORKSPACE
                     </button>
@@ -215,7 +219,7 @@ export function Workspace({today: initialToday}: { today: string }) {
                         <CommonPage projectId={tab.projectId} document={tab.document} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen} onSave={saved => setTabs(current => current.map(item => item.id === tab.id ? { ...item, label: `${saved.title.replace(/\.md$/i, '')}.md` } : item))}/>}
                 </div>)}
                 {activeCard || document ? null : section === 'projects' ? <ProjectList onOpenProject={handleProjectOpen}/> : section === 'common' ?
-                    <CommonPage projectId={projectId} document={null} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen}/> : section === 'project' ? <>{selectedBoard ? null : <BoardList projectId={projectId} onOpenBoard={board => handleBoardOpen(board)}/>}</> : <>
+                    <CommonPage projectId={projectId} document={null} onOpenDocument={handleDocumentOpen} onBack={handleCommonOpen}/> : section === 'project' ? <>{selectedBoard ? null : <BoardList key={projectId} boards={projectBoards[projectId] ?? SAMPLE_BOARD_ITEMS} onCreateBoard={handleBoardCreate} onOpenBoard={board => handleBoardOpen(board)}/>}</> : <>
                         <div className="page-heading">
                             <div>
                                 <div className="eyebrow">WORKSPACE OVERVIEW</div>
