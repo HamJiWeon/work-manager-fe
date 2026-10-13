@@ -18,6 +18,10 @@ describe('board_list', () => {
     const view = render(<BoardList boards={boards} onCreateBoard={vi.fn()} onOpenBoard={onOpenBoard} />)
     // then
     expect(within(screen.getByRole('list')).getAllByRole('heading').map(heading => heading.textContent)).toEqual(['작업 A', '작업 B', '완료 A', '완료 B'])
+    const activeBoard = within(screen.getByRole('button', { name: /작업 A/ }))
+    expect(activeBoard.getByRole('progressbar', { name: '작업 A 진행률' })).toHaveAttribute('value', '50')
+    expect(activeBoard.getByRole('progressbar', { name: '작업 A 진행률' })).toHaveAttribute('max', '100')
+    expect(activeBoard.getByText('50%', { selector: 'strong' })).toBeVisible()
     // when
     await user.click(screen.getByRole('button', { name: /완료 A/ }))
     // then
@@ -26,6 +30,10 @@ describe('board_list', () => {
     view.rerender(<BoardList boards={boards.map(board => board.id === 'active' ? { ...board, progress: 100 } : board)} onCreateBoard={vi.fn()} onOpenBoard={onOpenBoard} />)
     // then
     expect(within(screen.getByRole('list')).getAllByRole('heading').map(heading => heading.textContent)).toEqual(['작업 B', '완료 A', '작업 A', '완료 B'])
+    const completedBoard = within(screen.getByRole('button', { name: /작업 A/ }))
+    expect(completedBoard.getByRole('progressbar', { name: '작업 A 진행률' })).toHaveAttribute('value', '100')
+    expect(completedBoard.getByText('100%', { selector: 'strong' })).toBeVisible()
+    expect(completedBoard.queryByText('50%', { selector: 'strong' })).not.toBeInTheDocument()
     expect(boards.map(board => board.id)).toEqual(['done-1', 'active', 'done-2', 'new'])
   })
 })
