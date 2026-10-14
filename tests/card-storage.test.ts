@@ -100,6 +100,27 @@ describe('card_storage', () => {
     expect(cards).toEqual([saved])
   })
 
+  it('created_card_rejects_reversed_dates_without_changing_saved_cards_ko', () => {
+    // given
+    const existing = createCard('board', '기존 카드')
+    // when / then
+    expect(() => createCard('board', '잘못된 기간', '본문', { startDate: '2026-10-15', endDate: '2026-10-14' })).toThrow('종료일은 시작일 이후로 지정해 주세요.')
+    expect(readCreatedCards('board')).toEqual([existing])
+  })
+
+  it.each([
+    { startDate: '2026-10-14', endDate: '2026-10-14' },
+    { startDate: '2026-10-14' },
+    { endDate: '2026-10-15' },
+  ])('created_card_accepts_same_day_and_partial_dates_ok_%#', details => {
+    // given / when
+    const card = createCard('board', '기간 입력', '본문', { memberName: '', ...details })
+    // then
+    expect(card).toMatchObject({ title: '기간 입력', content: '본문', memberName: '', ...details })
+    expect(card.memberAvatarUrl).toBeUndefined()
+    expect(readCreatedCards('board')).toEqual([card])
+  })
+
   it('created_cards_validate_data_and_allocate_unique_numbers_ok', () => {
     // given
     localStorage.setItem('work-manager:created-cards:board', JSON.stringify([null, {}, { ...CARD, boardId: 'other' }, { ...CARD, cardNumber: -1 }]))

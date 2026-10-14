@@ -47,14 +47,14 @@ export function CardCreate({ boardId, expansionContainer }: { boardId: string; e
   </form>
   return <div className="card-create"><Dialog.Root open={open && !expanded} onOpenChange={handleOpenChange}>
     <Dialog.Trigger className="card-add-button" aria-label="시작 전 카드 추가"><Plus size={15} aria-hidden="true" />카드 추가</Dialog.Trigger>
-    <Dialog.Portal>
+    {open && !expanded && <Dialog.Portal>
       <Dialog.Backdrop className="board-dialog-backdrop" />
       <Dialog.Popup className="board-dialog card-create-dialog">
         <div className="card-create-dialog-heading"><Dialog.Title className="board-dialog-title">카드 추가</Dialog.Title><button type="button" className="icon-button" aria-label="카드 추가 창 확대" onClick={() => setExpanded(true)}><Maximize2 size={18} aria-hidden="true" /></button></div>
         <Dialog.Description className="board-dialog-description">제목과 내용을 입력하면 시작 전 목록에 추가됩니다.</Dialog.Description>
         {form}
       </Dialog.Popup>
-    </Dialog.Portal>
+    </Dialog.Portal>}
   </Dialog.Root>
   {open && expanded && expansionContainer.current && createPortal(<section className="card-create-page" aria-label="새 카드 작성">
     <div className="card-detail-layout"><div className="card-detail-content">{form}</div>

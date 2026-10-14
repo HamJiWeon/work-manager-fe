@@ -2,7 +2,7 @@ import { act, createEvent, fireEvent, render, screen, waitFor, within } from '@t
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CardPage } from '@/components/card-page'
-import type { CardPageLoader } from '@/lib/card'
+import type { CardItem, CardPageLoader } from '@/lib/card'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -61,6 +61,59 @@ describe('card_page', () => {
     await user.keyboard('{Escape}')
     expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
     expect(screen.getByRole('button', { name: '가로 배치' })).toHaveFocus()
+  })
+
+  it('layout_menu_keyboard_selection_and_escape_restore_focus_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    const onLayoutChange = vi.fn()
+    const view = render(<CardPage boardId="layout-board" layout="horizontal" onLayoutChange={onLayoutChange} />)
+    const trigger = screen.getByRole('button', { name: '가로 배치' })
+    // when
+    await user.click(trigger)
+    await user.keyboard('{Tab}')
+    // then
+    expect(screen.getByRole('menuitemradio', { name: '세로 배치' })).toHaveFocus()
+    expect(trigger.closest('details')).toHaveAttribute('open')
+    // when
+    await user.keyboard('{Enter}')
+    // then
+    expect(onLayoutChange).toHaveBeenCalledWith('vertical')
+    expect(trigger.closest('details')).not.toHaveAttribute('open')
+    expect(trigger).toHaveFocus()
+    // when
+    view.rerender(<CardPage boardId="layout-board" layout="vertical" onLayoutChange={onLayoutChange} />)
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.keyboard('{Tab}{Escape}')
+    // then
+    expect(screen.getByRole('button', { name: '세로 배치' })).toHaveFocus()
+    expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
+  })
+
+  it.each([
+    { startDate: '2026-10-14', endDate: '2026-10-15', startLabel: '26-10-14', endLabel: '26-10-15' },
+    { startDate: '2026-10-14', startLabel: '26-10-14', endLabel: '종료일 미지정' },
+    { endDate: '2026-10-15', startLabel: '시작일 미지정', endLabel: '26-10-15' },
+    { startLabel: '시작일 미지정', endLabel: '종료일 미지정' },
+  ])('card_and_move_preview_display_dates_ok_%#', async ({ startDate, endDate, startLabel, endLabel }) => {
+    // given
+    const card: CardItem = { id: 'dated-card', boardId: 'dates-board', cardNumber: 1, projectCode: 'PJT', title: '기간 카드', content: '', memberName: '나', status: 'NOT_STARTED', startDate, endDate }
+    const loadPage: CardPageLoader = async (_boardId, status) => ({ items: status === 'NOT_STARTED' ? [card] : [], nextCursor: null })
+    render(<CardPage boardId="dates-board" loadPage={loadPage} />)
+    const source = await screen.findByRole('button', { name: '기간 카드 카드 열기' })
+    // then
+    expect(within(source).getByLabelText('작업 기간')).toHaveTextContent(`${startLabel}~${endLabel}`)
+    // when
+    fireEvent.dragStart(source.closest('article')!, { dataTransfer: { setData: vi.fn() } })
+    fireEvent.dragOver(screen.getByRole('region', { name: '진행 중 카드 목록' }), { dataTransfer: {} })
+    // then
+    const preview = screen.getByRole('article', { name: '기간 카드 이동 미리보기' })
+    expect(within(preview).getByLabelText('작업 기간')).toHaveTextContent(`${startLabel}~${endLabel}`)
+    // when
+    fireEvent.dragEnd(source.closest('article')!)
+    // then
+    expect(screen.queryByRole('article', { name: '기간 카드 이동 미리보기' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '기간 카드 카드 열기' })).toBeInTheDocument()
   })
 
   it('scroll_loads_only_its_status_and_stops_at_end_ok', async () => {

@@ -68,6 +68,63 @@ describe('card_create', () => {
     expect(screen.getByRole('button', { name: '종료일 변경' })).toHaveTextContent('2026-10-15')
   })
 
+  it('expanded_reversed_dates_preserve_draft_and_allow_correction_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="invalid-dates" />)
+    await user.click(screen.getByRole('button', { name: '시작 전 카드 추가' }))
+    await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), '기간 검증')
+    await user.type(screen.getByRole('textbox', { name: '내용' }), '본문 유지')
+    await user.click(screen.getByRole('button', { name: '카드 추가 창 확대' }))
+    await user.type(screen.getByLabelText('시작일'), '2026-10-15')
+    await user.type(screen.getByLabelText('종료일'), '2026-10-14')
+    // when
+    await user.click(screen.getByRole('textbox', { name: '내용' }))
+    await user.keyboard('{Control>}s{/Control}')
+    // then
+    expect(screen.getByRole('alert')).toHaveTextContent('종료일은 시작일 이후로 지정해 주세요.')
+    expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('본문 유지')
+    expect(screen.queryByRole('button', { name: '기간 검증 카드 열기' })).not.toBeInTheDocument()
+    // when
+    await user.clear(screen.getByLabelText('종료일'))
+    await user.type(screen.getByLabelText('종료일'), '2026-10-15')
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    // then
+    expect(await screen.findByRole('button', { name: '기간 검증 카드 열기' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '새 카드 작성' })).not.toBeInTheDocument()
+  })
+
+  it('expanded_formatting_and_cancel_reset_all_fields_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="cancel-expanded" />)
+    await user.click(screen.getByRole('button', { name: '시작 전 카드 추가' }))
+    await user.click(screen.getByRole('button', { name: '카드 추가 창 확대' }))
+    await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), '취소할 카드')
+    await user.selectOptions(screen.getByRole('combobox', { name: '담당자' }), '김민수')
+    await user.type(screen.getByLabelText('시작일'), '2026-10-14')
+    // when
+    await user.type(screen.getByRole('textbox', { name: '내용' }), '강조')
+    await user.keyboard('{Control>}a{/Control}')
+    await user.click(screen.getByRole('button', { name: '굵게' }))
+    // then
+    expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('**강조**')
+    // when
+    await user.click(screen.getByRole('button', { name: '취소' }))
+    // then
+    expect(screen.queryByRole('region', { name: '새 카드 작성' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '취소할 카드 카드 열기' })).not.toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: '시작 전 카드 추가' }))
+    await user.click(screen.getByRole('button', { name: '카드 추가 창 확대' }))
+    // then
+    expect(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' })).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('')
+    expect(screen.getByRole('combobox', { name: '담당자' })).toHaveValue('나')
+    expect(screen.getByLabelText('시작일')).toHaveValue('')
+    expect(screen.getByLabelText('종료일')).toHaveValue('')
+  })
+
   it('blank_cancel_and_storage_failure_preserve_draft_ok', async () => {
     // given
     const user = userEvent.setup()
