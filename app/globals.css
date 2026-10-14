@@ -553,3 +553,21 @@ main:has(>div:not([hidden]) .card-create-page) > .list-switcher { display:none; 
 
 .work-card h4 { width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .card-date-summary > span:last-child { grid-column:1/-1; }
+
+.card-create-dialog form { overflow-y:auto; }
+.card-create-dialog .card-detail-panel { flex-shrink:0; margin-top:16px; padding:16px; }
+.card-create-dialog .card-detail-heading { display:none; }
+.card-create-dialog .card-detail-panel dl { display:grid; grid-template-columns:minmax(120px,1fr) minmax(0,2fr); gap:16px; }
+.card-create-dialog .card-detail-panel dl>div+div { margin-top:0; }
+.card-create-dialog .detail-date-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.card-create-dialog .card-detail-panel label { margin:0; }
+.card-create-dialog .card-detail-panel dt { margin-bottom:8px; }
+@media(max-width:600px) { .card-create-dialog .card-detail-panel dl { grid-template-columns:minmax(0,1fr); } }
+
+.card-create-dialog .card-detail-panel dl { grid-template-columns:minmax(0,calc((100% - 24px)/3)) minmax(0,1fr); gap:12px; align-items:end; }
+.card-create-dialog .card-detail-panel dd>select,
+.card-create-dialog .card-detail-panel .detail-date-field>input { height:40px; margin:0; padding:8px 12px; border:1px solid #dce1e5; border-radius:7px; background:white; font-family:inherit; font-size:13px; line-height:normal; }
+.card-create-dialog .card-detail-panel .detail-date-field>span { margin-bottom:8px; }
+@media(max-width:600px) { .card-create-dialog .card-detail-panel dl { grid-template-columns:minmax(0,1fr); } }
+
+.card-create-dialog :is(input,textarea,select):focus-visible { outline-offset:-2px; }

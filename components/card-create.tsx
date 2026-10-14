@@ -3,9 +3,10 @@
 import { useId, useLayoutEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { Dialog } from '@base-ui/react/dialog'
-import { CalendarDays, Maximize2, Minimize2, Plus, Users } from 'lucide-react'
+import { Maximize2, Minimize2, Plus, Users } from 'lucide-react'
 import { createCard } from '@/lib/created-cards'
 import { useMarkdownEditor } from '@/hooks/use-markdown-editor'
+import { CARD_DATE_RANGE_ERROR, isCardDateInRange, MAX_CARD_DATE, MIN_CARD_DATE } from '@/lib/card-date'
 import { MARKDOWN_ACTIONS } from '@/lib/markdown-editor'
 
 type CardCreateError = { type: 'title' | 'period' | 'form'; message: string }
@@ -39,10 +40,24 @@ export function CardCreate({ boardId, expansionContainer }: { boardId: string; e
     setOpen(nextOpen)
     setTitle(''); handleReset(''); setExpanded(false); setError(null); setMemberName('나'); setStartDate(''); setEndDate('')
   }
+  const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
+    if (!isCardDateInRange(value)) { setError({ type: 'period', message: CARD_DATE_RANGE_ERROR }); return }
+    if (field === 'startDate') setStartDate(value)
+    else setEndDate(value)
+    setError(current => current?.type === 'period' ? null : current)
+  }
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     handleSave(draft)
   }
+  const details = <aside className="card-detail-panel" aria-label="카드 세부 사항">
+        <div className="card-detail-heading"><h2>세부 사항</h2></div>
+        <dl><div><dt><Users size={15} aria-hidden="true" />담당자</dt><dd><select aria-label="담당자" value={memberName} onChange={event => setMemberName(event.target.value)}><option value="">미지정</option>{['김민수', '이서연', '박지훈', '나'].map(name => <option key={name}>{name}</option>)}</select></dd></div>
+        <div><dt className="sr-only">작업 기간</dt><dd className="detail-date-fields">
+          <label className="detail-date-field"><span>시작일</span><input type="date" aria-label="시작일" value={startDate} min={MIN_CARD_DATE} max={endDate || MAX_CARD_DATE} aria-invalid={error?.type === 'period'} aria-describedby={error?.type === 'period' ? `${fieldId}-error` : undefined} onChange={event => handleDateChange('startDate', event.target.value)} /></label>
+          <label className="detail-date-field"><span>종료일</span><input type="date" aria-label="종료일" value={endDate} min={startDate || MIN_CARD_DATE} max={MAX_CARD_DATE} aria-invalid={error?.type === 'period'} aria-describedby={error?.type === 'period' ? `${fieldId}-error` : undefined} onChange={event => handleDateChange('endDate', event.target.value)} /></label>
+        </dd></div></dl>
+      </aside>
   const form = <form aria-label="카드 추가 입력" aria-describedby={error?.type === 'form' ? `${fieldId}-error` : undefined} className={expanded ? 'card-document card-create-page-editor' : undefined} onSubmit={handleSubmit}>
     <div className={expanded ? 'card-document-heading' : undefined}>
       <div><label className={expanded ? 'sr-only' : undefined} htmlFor={`${fieldId}-title`}>제목 <span>(필수)</span></label>
@@ -52,6 +67,7 @@ export function CardCreate({ boardId, expansionContainer }: { boardId: string; e
     <label className={expanded ? 'sr-only' : undefined} htmlFor={`${fieldId}-content`}>내용</label>
     {expanded && <div className="markdown-toolbar" role="toolbar" aria-label="Markdown 서식">{MARKDOWN_ACTIONS.map(action => <button key={action.id} type="button" aria-label={action.label} title={`${action.label} (⌘ / Ctrl + ${action.shortcut})`} onMouseDown={event => event.preventDefault()} onClick={() => handleFormat(action.id)}>{action.symbol}</button>)}</div>}
     <textarea ref={textarea} onKeyDown={handleKeyDown} onSelect={handleSelectionChange} id={`${fieldId}-content`} placeholder="카드 내용을 입력하세요" value={draft} onChange={handleChange} rows={5} />
+    {!expanded && details}
     {error && <p id={`${fieldId}-error`} role="alert" className="board-create-error">{error.message}</p>}
     {!expanded && <div className="board-dialog-actions"><button type="button" onClick={() => handleOpenChange(false)}>취소</button><button type="submit" className="board-create-button">추가</button></div>}
   </form>
@@ -61,21 +77,14 @@ export function CardCreate({ boardId, expansionContainer }: { boardId: string; e
       <Dialog.Backdrop className="board-dialog-backdrop" />
       <Dialog.Popup initialFocus={titleInput} finalFocus={false} className="board-dialog card-create-dialog">
         <div className="card-create-dialog-heading"><Dialog.Title className="board-dialog-title">카드 추가</Dialog.Title><button type="button" className="icon-button" aria-label="카드 추가 창 확대" onClick={() => setExpanded(true)}><Maximize2 size={18} aria-hidden="true" /></button></div>
-        <Dialog.Description className="board-dialog-description">제목과 내용을 입력하면 시작 전 목록에 추가됩니다.</Dialog.Description>
+        <Dialog.Description className="board-dialog-description">제목과 내용, 담당자와 작업 기간을 설정하세요.</Dialog.Description>
         {form}
       </Dialog.Popup>
     </Dialog.Portal>}
   </Dialog.Root>
   {open && expanded && expansionContainer.current && createPortal(<section className="card-create-page" aria-label="새 카드 작성">
     <div className="card-detail-layout"><div className="card-detail-content">{form}</div>
-      <aside className="card-detail-panel" aria-label="카드 세부 사항">
-        <div className="card-detail-heading"><h2>세부 사항</h2></div>
-        <dl><div><dt><Users size={15} aria-hidden="true" />담당자</dt><dd><select aria-label="담당자" value={memberName} onChange={event => setMemberName(event.target.value)}><option value="">미지정</option>{['김민수', '이서연', '박지훈', '나'].map(name => <option key={name}>{name}</option>)}</select></dd></div>
-        <div><dt><CalendarDays size={15} aria-hidden="true" />시작일 ~ 종료일</dt><dd className="detail-date-fields">
-          <label className="detail-date-field"><span>시작일</span><input type="date" aria-label="시작일" value={startDate} max={endDate || undefined} aria-invalid={error?.type === 'period'} aria-describedby={error?.type === 'period' ? `${fieldId}-error` : undefined} onChange={event => { setStartDate(event.target.value); setError(current => current?.type === 'period' ? null : current) }} /></label>
-          <label className="detail-date-field"><span>종료일</span><input type="date" aria-label="종료일" value={endDate} min={startDate || undefined} aria-invalid={error?.type === 'period'} aria-describedby={error?.type === 'period' ? `${fieldId}-error` : undefined} onChange={event => { setEndDate(event.target.value); setError(current => current?.type === 'period' ? null : current) }} /></label>
-        </dd></div></dl>
-      </aside>
+      {details}
     </div>
   </section>, expansionContainer.current)}
   </div>

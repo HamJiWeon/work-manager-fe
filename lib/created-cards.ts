@@ -1,3 +1,4 @@
+import { CARD_DATE_RANGE_ERROR, isCardDateInRange } from '@/lib/card-date'
 import { CARD_STATUSES, getMemberAvatarUrl, type CardItem, type CardStatus } from '@/lib/card'
 
 export const CREATED_CARDS_CHANGE_EVENT = 'work-manager:created-cards-change'
@@ -31,6 +32,7 @@ export function createCard(boardId: string, title: string, content = '', details
     startDate: details.startDate, endDate: details.endDate,
   }
   if (!card.title) throw new Error('제목을 입력해 주세요.')
+  if (!isCardDateInRange(card.startDate ?? '') || !isCardDateInRange(card.endDate ?? '')) throw new Error(CARD_DATE_RANGE_ERROR)
   if (card.startDate && card.endDate && card.startDate > card.endDate) throw new Error('종료일은 시작일 이후로 지정해 주세요.')
   localStorage.setItem(`${STORAGE_PREFIX}${boardId}`, JSON.stringify([...cards, card]))
   window.dispatchEvent(new Event(CREATED_CARDS_CHANGE_EVENT))

@@ -33,6 +33,54 @@ describe('card_create', () => {
     expect(screen.queryByRole('textbox', { name: 'Markdown 작성' })).not.toBeInTheDocument()
   })
 
+  it('create_with_member_and_dates_without_expanding_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="compact-details" />)
+    await user.click(screen.getByRole('button', { name: '시작 전 카드 추가' }))
+    // when
+    await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), '일정 작업')
+    await user.selectOptions(screen.getByRole('combobox', { name: '담당자' }), '이서연')
+    await user.type(screen.getByLabelText('시작일'), '2026-10-14')
+    await user.type(screen.getByLabelText('종료일'), '2026-10-16')
+    await user.click(screen.getByRole('button', { name: '카드 추가 창 확대' }))
+    // then
+    expect(screen.getByRole('combobox', { name: '담당자' })).toHaveValue('이서연')
+    expect(screen.getByLabelText('시작일')).toHaveValue('2026-10-14')
+    // when
+    await user.click(screen.getByRole('button', { name: '카드 추가 창 축소' }))
+    // then
+    expect(screen.getByLabelText('종료일')).toHaveValue('2026-10-16')
+    // when
+    await user.click(screen.getByRole('button', { name: '추가' }))
+    const card = await screen.findByRole('button', { name: '일정 작업 카드 열기' })
+    // then
+    expect(within(card).getByLabelText('작업 기간')).toHaveTextContent('26-10-14~26-10-16')
+    expect(within(card).getByRole('img', { name: '이서연 프로필 사진' })).toBeInTheDocument()
+    // when
+    await user.click(card)
+    // then
+    expect(screen.getByRole('button', { name: '담당자 변경' })).toHaveTextContent('이서연')
+    expect(screen.getByRole('button', { name: '종료일 변경' })).toHaveTextContent('2026-10-16')
+  })
+
+  it.each(['시작일', '종료일'])('reject_six_digit_year_and_allow_correction_ok_%s', async label => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="date-range" />)
+    await user.click(screen.getByRole('button', { name: '시작 전 카드 추가' }))
+    // when
+    await user.type(screen.getByLabelText(label), '202020-02-20')
+    // then
+    expect(screen.getByLabelText(label)).toHaveValue('')
+    expect(screen.getByRole('alert')).toHaveTextContent('날짜의 연도는 1~9999년으로 입력해 주세요.')
+    // when
+    await user.type(screen.getByLabelText(label), '2020-02-20')
+    // then
+    expect(screen.getByLabelText(label)).toHaveValue('2020-02-20')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('expand_collapse_preserves_draft_and_saves_markdown_ok', async () => {
     // given
     const user = userEvent.setup()

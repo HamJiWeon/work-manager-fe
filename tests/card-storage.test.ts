@@ -100,6 +100,12 @@ describe('card_storage', () => {
     expect(cards).toEqual([saved])
   })
 
+  it.each(['startDate', 'endDate'] as const)('created_card_rejects_six_digit_year_ko_%s', field => {
+    // given / when / then
+    expect(() => createCard('board', '날짜 검증', '', { [field]: '202020-02-20' })).toThrow('날짜의 연도는 1~9999년으로 입력해 주세요.')
+    expect(readCreatedCards('board')).toEqual([])
+  })
+
   it('created_card_rejects_reversed_dates_without_changing_saved_cards_ko', () => {
     // given
     const existing = createCard('board', '기존 카드')
