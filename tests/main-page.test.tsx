@@ -96,6 +96,52 @@ describe('workspace', () => {
     expect(screen.getByRole('complementary', { name: '워크스페이스 탐색' })).toBeVisible()
   })
 
+  it('tab_drag_ignores_external_self_and_repeated_targets_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<MainPage today={TODAY} />)
+    await openProject(user)
+    const source = screen.getByRole('tab', { name: '프로젝트1' })
+    const target = screen.getByRole('tab', { name: '작업 현황' }).parentElement!
+    vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100 } as DOMRect)
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '', dropEffect: '' }
+    // when
+    fireEvent.dragOver(target, { dataTransfer })
+    fireEvent.drop(target, { dataTransfer })
+    fireEvent.dragStart(source, { dataTransfer })
+    fireEvent.dragOver(source.parentElement!, { dataTransfer })
+    fireEvent.drop(source.parentElement!, { dataTransfer })
+    // then
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['작업 현황', '프로젝트 리스트', '프로젝트1'])
+    // when
+    fireEvent.dragStart(source, { dataTransfer })
+    const over = createEvent.dragOver(target, { dataTransfer })
+    Object.defineProperty(over, 'clientX', { value: 90 })
+    fireEvent(target, over)
+    fireEvent(target, over)
+    fireEvent.drop(target, { dataTransfer })
+    // then
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['작업 현황', '프로젝트1', '프로젝트 리스트'])
+    expect(source).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('keyboard_tab_reorder_right_and_boundaries_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<MainPage today={TODAY} />)
+    await openProject(user)
+    const source = screen.getByRole('tab', { name: '프로젝트1' })
+    source.focus()
+    // when
+    await user.keyboard('{Alt>}{ArrowRight}{/Alt}')
+    // then
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['작업 현황', '프로젝트 리스트', '프로젝트1'])
+    // when
+    await user.keyboard('{Alt>}{ArrowLeft}{ArrowRight}{/Alt}')
+    // then
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['작업 현황', '프로젝트 리스트', '프로젝트1'])
+  })
+
   it('reorder_tabs_with_keyboard_preserves_active_page_ok', async () => {
     // given
     const user = userEvent.setup()
