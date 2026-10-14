@@ -20,6 +20,7 @@ describe('card_page', () => {
     // then
     expect(within(card).getByLabelText('카드 코드')).toHaveTextContent(/^PJT-1$/)
     expect(within(screen.getByRole('button', { name: 'Team 작업 2 카드 열기' })).getByLabelText('카드 코드')).toHaveTextContent(/^PJT-2$/)
+    expect(within(card).getByLabelText('작업 기간')).toHaveTextContent('시작일 미지정~종료일 미지정')
     expect(within(card).queryByLabelText('카드 번호')).not.toBeInTheDocument()
     expect(within(card.closest('article')!).queryByText('이동')).not.toBeInTheDocument()
     expect(within(card.closest('article')!).getAllByRole('button')).toHaveLength(1)
@@ -44,13 +45,22 @@ describe('card_page', () => {
     render(<CardPage boardId="project1" />)
     // then
     expect(screen.getByRole('button', { name: '세로 배치' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
+    expect(screen.queryByRole('button', { name: '가로 배치' })).not.toBeInTheDocument()
     for (const label of ['시작 전', '진행 중', '완료']) {
       expect(screen.getByRole('region', { name: `${label} 카드 목록` })).toHaveAttribute('tabindex', '0')
     }
     // when
-    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    expect(screen.getByRole('menuitemradio', { name: '세로 배치' })).toHaveAttribute('aria-checked', 'true')
+    await user.click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     // then
     expect(screen.getByRole('button', { name: '가로 배치' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
+    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
+    expect(screen.getByRole('button', { name: '가로 배치' })).toHaveFocus()
   })
 
   it('scroll_loads_only_its_status_and_stops_at_end_ok', async () => {
@@ -71,7 +81,8 @@ describe('card_page', () => {
     await within(todo).findByRole('heading', { name: 'Team' })
     await waitFor(() => expect(observers.length).toBe(3))
     // when
-    await userEvent.setup().click(screen.getByRole('button', { name: '가로 배치' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: '세로 배치' }))
+    await userEvent.setup().click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     const trigger = () => {
       const observer = observers.findLast(entry => !entry.disconnected && entry.target && todo.contains(entry.target))!
       observer.callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver)
@@ -107,7 +118,8 @@ describe('card_page', () => {
     await selectCardForMove(user, moved)
     await user.click(screen.getByLabelText('완료 위치 지정'))
     await user.click(screen.getByRole('button', { name: '완료로 이동' }))
-    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     await user.click(within(todo).getByRole('button', { name: '시작 전 더 불러오기' }))
     // then
     await within(todo).findByRole('heading', { name: 'Team 작업 16' })
@@ -156,7 +168,8 @@ describe('card_page', () => {
     const progress = screen.getByRole('region', { name: '진행 중 카드 목록' })
     await user.click(within(progress).getByRole('button', { name: '진행 중 더 불러오기' }))
     await within(progress).findByRole('heading', { name: 'User 작업 16' })
-    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     // then
     expect(within(progress).getAllByRole('heading').slice(0, 2).map(element => element.textContent)).toEqual(['Team', 'User'])
     expect(within(todo).queryByRole('heading', { name: 'Team' })).not.toBeInTheDocument()
@@ -167,7 +180,8 @@ describe('card_page', () => {
     // given
     const user = userEvent.setup()
     render(<CardPage boardId="project1" />)
-    await user.click(screen.getByRole('button', { name: layout }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: layout }))
     const todo = screen.getByRole('region', { name: '시작 전 카드 목록' })
     const source = (await within(todo).findByRole('button', { name: 'Team 카드 열기' })).closest('article')!
     const target = within(todo).getByRole('button', { name: 'Team 작업 3 카드 열기' }).closest('li')!
@@ -196,7 +210,8 @@ describe('card_page', () => {
     // given
     const user = userEvent.setup()
     render(<CardPage boardId="project1" />)
-    await user.click(screen.getByRole('button', { name: layout }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: layout }))
     const todo = screen.getByRole('region', { name: '시작 전 카드 목록' })
     const progress = screen.getByRole('region', { name: '진행 중 카드 목록' })
     const source = (await within(todo).findByRole('button', { name: 'Team 카드 열기' })).closest('article')!
@@ -278,7 +293,8 @@ describe('card_page', () => {
     // given
     const user = userEvent.setup()
     render(<CardPage boardId="project1" />)
-    await user.click(screen.getByRole('button', { name: layout }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: layout }))
     const todo = screen.getByRole('region', { name: '시작 전 카드 목록' })
     const progress = screen.getByRole('region', { name: '진행 중 카드 목록' })
     const source = (await within(todo).findByRole('button', { name: 'Team 카드 열기' })).closest('article')!
@@ -328,7 +344,8 @@ describe('card_page', () => {
     // given
     const user = userEvent.setup()
     render(<CardPage boardId="project1" />)
-    await user.click(screen.getByRole('button', { name: layout }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: layout }))
     const todo = screen.getByRole('region', { name: '시작 전 카드 목록' })
     const source = (await within(todo).findByRole('button', { name: 'Team 카드 열기' })).closest('article')!
     const target = within(todo).getByRole('button', { name: 'Team 작업 2 카드 열기' }).closest('li')!

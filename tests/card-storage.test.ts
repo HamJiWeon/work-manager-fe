@@ -104,14 +104,16 @@ describe('card_storage', () => {
     // given
     localStorage.setItem('work-manager:created-cards:board', JSON.stringify([null, {}, { ...CARD, boardId: 'other' }, { ...CARD, cardNumber: -1 }]))
     // when
-    const first = createCard('board', 'DONE', ' 작업 ')
-    const second = createCard('board', 'NOT_STARTED', '두 번째')
+    const first = createCard('board', ' 작업 ')
+    const second = createCard('board', '두 번째')
     // then
     expect(first.title).toBe('작업')
+    expect(first.status).toBe('NOT_STARTED')
+    expect(second.status).toBe('NOT_STARTED')
     expect(second.cardNumber).toBe(first.cardNumber + 1)
     expect(second.id).not.toBe(first.id)
     expect(readCreatedCards('board')).toEqual([first, second])
-    expect(() => createCard('board', 'DONE', ' ')).toThrow('제목을 입력해 주세요.')
+    expect(() => createCard('board', ' ')).toThrow('제목을 입력해 주세요.')
     localStorage.setItem('work-manager:created-cards:board', '{}')
     expect(readCreatedCards('board')).toEqual([])
   })
