@@ -58,6 +58,8 @@ describe('card_create', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: '담당자' }), '김민수')
     await user.type(screen.getByLabelText('시작일'), '2026-10-14')
     await user.type(screen.getByLabelText('종료일'), '2026-10-15')
+    expect(screen.getByLabelText('시작일')).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByLabelText('종료일')).not.toHaveAttribute('aria-describedby')
     await user.click(screen.getByRole('button', { name: '저장' }))
     await user.click(await screen.findByRole('button', { name: '확대 작성 카드 열기' }))
     // then
@@ -83,11 +85,22 @@ describe('card_create', () => {
     await user.keyboard('{Control>}s{/Control}')
     // then
     expect(screen.getByRole('alert')).toHaveTextContent('종료일은 시작일 이후로 지정해 주세요.')
+    expect(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' })).toBeValid()
+    expect(screen.getByLabelText('시작일')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('종료일')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('시작일')).toHaveAccessibleDescription('종료일은 시작일 이후로 지정해 주세요.')
+    expect(screen.getByLabelText('종료일')).toHaveAccessibleDescription('종료일은 시작일 이후로 지정해 주세요.')
+    await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), ' 수정')
+    expect(screen.getByRole('alert')).toHaveTextContent('종료일은 시작일 이후로 지정해 주세요.')
+    await user.clear(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }))
+    await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), '기간 검증')
     expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('본문 유지')
     expect(screen.queryByRole('button', { name: '기간 검증 카드 열기' })).not.toBeInTheDocument()
     // when
     await user.clear(screen.getByLabelText('종료일'))
     await user.type(screen.getByLabelText('종료일'), '2026-10-15')
+    expect(screen.getByLabelText('시작일')).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByLabelText('종료일')).not.toHaveAttribute('aria-describedby')
     await user.click(screen.getByRole('button', { name: '저장' }))
     // then
     expect(await screen.findByRole('button', { name: '기간 검증 카드 열기' })).toBeInTheDocument()
@@ -134,6 +147,8 @@ describe('card_create', () => {
     await user.click(screen.getByRole('button', { name: '추가' }))
     // then
     expect(screen.getByRole('alert')).toHaveTextContent('제목을 입력해 주세요.')
+    expect(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' })).toBeInvalid()
+    expect(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' })).toHaveAccessibleDescription('제목을 입력해 주세요.')
     // when
     await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), '초안')
     await user.type(screen.getByRole('textbox', { name: '내용' }), '작성 중 내용')
@@ -141,6 +156,9 @@ describe('card_create', () => {
     await user.click(screen.getByRole('button', { name: '추가' }))
     // then
     expect(screen.getByRole('alert')).toHaveTextContent('카드를 저장하지 못했습니다.')
+    expect(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' })).toBeValid()
+    expect(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' })).not.toHaveAttribute('aria-describedby')
+    expect(screen.getByRole('form', { name: '카드 추가 입력' })).toHaveAccessibleDescription('카드를 저장하지 못했습니다. 다시 시도해 주세요.')
     expect(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' })).toHaveValue('초안')
     expect(screen.queryByRole('button', { name: '초안 카드 열기' })).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue('작성 중 내용')
