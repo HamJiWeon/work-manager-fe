@@ -222,6 +222,34 @@ describe('card_page', () => {
     expect(within(todo).getAllByRole('heading')[0].textContent).toBe('Team')
   })
 
+  it('drag_leave_clears_preview_and_selection_can_be_cleared_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="project1" />)
+    const todo = screen.getByRole('region', { name: '시작 전 카드 목록' })
+    const done = screen.getByRole('region', { name: '완료 카드 목록' })
+    const card = await within(todo).findByRole('button', { name: 'Team 카드 열기' })
+    const source = card.closest('article')!
+    const target = done.closest('section')!
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '', dropEffect: '' }
+    // when
+    card.focus()
+    await user.keyboard('[Space]')
+    await user.click(screen.getByRole('button', { name: '선택 해제' }))
+    // then
+    expect(screen.queryByRole('button', { name: '선택 해제' })).not.toBeInTheDocument()
+    // when
+    fireEvent.dragStart(source, { dataTransfer })
+    fireEvent.dragOver(target, { dataTransfer })
+    // then
+    expect(within(done).getByRole('article', { name: 'Team 이동 미리보기' })).toBeInTheDocument()
+    // when
+    fireEvent.dragLeave(target, { relatedTarget: document.body })
+    // then
+    expect(screen.queryByRole('article', { name: 'Team 이동 미리보기' })).not.toBeInTheDocument()
+    fireEvent.dragEnd(source, { dataTransfer })
+  })
+
   it('drop_on_preview_commits_exact_position_ok', async () => {
     // given
     render(<CardPage boardId="project1" />)
@@ -237,6 +265,7 @@ describe('card_page', () => {
     Object.defineProperties(over, { clientX: { value: 90 }, clientY: { value: 90 } })
     fireEvent(target, over)
     const preview = within(done).getByRole('article', { name: 'Team 이동 미리보기' })
+    fireEvent.dragOver(preview.closest('li')!, { dataTransfer })
     fireEvent.drop(preview.closest('li')!, { dataTransfer })
     // then
     expect(within(done).getAllByRole('heading').slice(0, 3).map(element => element.textContent)).toEqual(['Login', 'Team', 'Login 작업 2'])

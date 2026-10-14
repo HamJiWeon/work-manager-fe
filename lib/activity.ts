@@ -1,4 +1,6 @@
 export const PROJECTS = [{ id: 'project-1', name: '프로젝트1' }, { id: 'project-2', name: '프로젝트2' }]
+import type { CardItem } from '@/lib/card'
+
 export const ALL_PROJECTS = 'all'
 export const DAYS_IN_WEEK = 7
 const DAY_MS = 86_400_000
@@ -7,6 +9,21 @@ const SAMPLE_TITLES = ['화면 구성 정리', '컴포넌트 구현', '사용자
 
 export interface CompletedTask { id: string; projectId: string; title: string; date: string }
 export interface ActivityDay { date: string; weekday: number; month: number; day: number }
+
+/** API 연결 전 완료 이력의 고유 ID와 작업 정보를 카드 상세 화면의 예시 데이터로 변환한다. */
+export function getSampleCompletedCard(task: CompletedTask): CardItem {
+  return {
+    id: task.id,
+    boardId: `${task.projectId}-login`,
+    cardNumber: Number(task.id.split('-').at(-1)) + 1,
+    title: task.title,
+    content: '',
+    memberName: '나',
+    projectCode: 'PJT',
+    status: 'DONE',
+    endDate: task.date,
+  }
+}
 
 /** 서울 기준 오늘 날짜를 구해 서버와 클라이언트의 날짜 기준을 통일한다. */
 export function getToday(date = new Date()): string {
@@ -31,6 +48,11 @@ export function getMonthDays(month: string): ActivityDay[] {
     days.push({ date: date.toISOString().slice(0, 10), weekday: date.getUTCDay(), month: date.getUTCMonth() + 1, day: date.getUTCDate() })
   }
   return days
+}
+
+/** 지정 연도의 모든 날짜를 월 순서로 생성하며 윤년을 반영한다. */
+export function getYearDays(year: number): ActivityDay[] {
+  return Array.from({ length: 12 }, (_, month) => getMonthDays(`${year}-${String(month + 1).padStart(2, '0')}`)).flat()
 }
 
 /** 연도 경계를 포함해 표시 월을 이동한다. */

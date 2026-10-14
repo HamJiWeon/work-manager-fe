@@ -25,7 +25,7 @@ function subscribe(onChange: () => void) {
   }
 }
 
-interface CommonPageProps {
+interface WorkspacePageProps {
   projectId: string
   document: string | null
   onOpenDocument: (name: string) => void
@@ -34,7 +34,7 @@ interface CommonPageProps {
 }
 
 /** 프로젝트별 공통 문서 목록과 카드와 동일한 Markdown 편집·미리보기를 제공한다. */
-export function CommonPage({ projectId, document, onOpenDocument, onBack, onSave }: CommonPageProps) {
+export function WorkspacePage({ projectId, document, onOpenDocument, onBack, onSave }: WorkspacePageProps) {
   const snapshot = useSyncExternalStore(subscribe, () => JSON.stringify(COMMON_DOCUMENTS.map(item => readWorkspaceDocument(projectId, item.name))), () => JSON.stringify(COMMON_DOCUMENTS.map(() => null)))
   const savedDocuments = JSON.parse(snapshot) as (SavedCardDocument | null)[]
   if (document) {

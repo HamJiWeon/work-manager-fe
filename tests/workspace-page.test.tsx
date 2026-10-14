@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CommonPage } from '@/components/common-page'
+import { WorkspacePage } from '@/components/workspace-page'
 
 function CommonWorkspace({ projectId = 'project-1' }: { projectId?: string }) {
   const [document, setDocument] = useState<string | null>(null)
-  return <CommonPage projectId={projectId} document={document} onOpenDocument={setDocument} onBack={() => setDocument(null)} />
+  return <WorkspacePage projectId={projectId} document={document} onOpenDocument={setDocument} onBack={() => setDocument(null)} />
 }
 
 beforeEach(() => localStorage.clear())

@@ -1,13 +1,13 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { Workspace } from '@/components/workspace'
+import { MainPage } from '@/components/main-page'
 
 describe('board_create', () => {
   it('create_board_in_project_and_open_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today="2026-10-12" />)
+    render(<MainPage today="2026-10-12" />)
     await user.click(screen.getByRole('button', { name: 'PROJECT 2' }))
     await user.click(screen.getByRole('button', { name: /프로젝트1.*작업 현황 보기/ }))
     // when
@@ -31,7 +31,7 @@ describe('board_create', () => {
   it('blank_title_cancel_escape_and_reset_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today="2026-10-12" />)
+    render(<MainPage today="2026-10-12" />)
     await user.click(screen.getByRole('button', { name: 'PROJECT 2' }))
     await user.click(screen.getByRole('button', { name: /프로젝트1.*작업 현황 보기/ }))
     await user.click(screen.getByRole('button', { name: '보드 추가' }))

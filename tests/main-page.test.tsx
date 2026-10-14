@@ -1,7 +1,7 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, createEvent, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Workspace } from '@/components/workspace'
+import { MainPage } from '@/components/main-page'
 
 const TODAY = '2026-09-09'
 beforeEach(() => localStorage.clear())
@@ -13,12 +13,128 @@ async function openProject(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('workspace', () => {
+  it('drag_tabs_preview_commit_and_cancel_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<MainPage today={TODAY} />)
+    await openProject(user)
+    const source = screen.getByRole('tab', { name: '프로젝트1' })
+    const target = screen.getByRole('tab', { name: '작업 현황' }).parentElement!
+    vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100 } as DOMRect)
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '', dropEffect: '' }
+    // when
+    fireEvent.dragStart(source, { dataTransfer })
+    const over = createEvent.dragOver(target, { dataTransfer })
+    Object.defineProperty(over, 'clientX', { value: 10 })
+    fireEvent(target, over)
+    // then
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['프로젝트1', '작업 현황', '프로젝트 리스트'])
+    expect(source).toHaveAttribute('aria-selected', 'true')
+    // when
+    fireEvent.dragEnd(source)
+    // then
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['작업 현황', '프로젝트 리스트', '프로젝트1'])
+    // when
+    fireEvent.dragStart(source, { dataTransfer })
+    fireEvent(target, over)
+    fireEvent.drop(target, { dataTransfer })
+    fireEvent.dragEnd(source)
+    // then
+    expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['프로젝트1', '작업 현황', '프로젝트 리스트'])
+    expect(screen.getByRole('tabpanel', { name: '프로젝트1' })).toBeVisible()
+  })
+
+  it('year_and_project_filter_update_activity_and_reset_date_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<MainPage today={TODAY} />)
+    // when
+    await user.click(screen.getByRole('button', { name: '2025' }))
+    await user.selectOptions(screen.getByRole('combobox', { name: '프로젝트 선택' }), 'project-2')
+    // then
+    expect(screen.getByRole('heading', { name: /2025년 작업 완료 \d+개/ })).toBeVisible()
+    expect(screen.getByRole('heading', { name: '날짜별 작업' })).toBeVisible()
+    expect(screen.getByRole('tab', { name: '프로젝트2 작업 현황' })).toHaveAttribute('aria-selected', 'true')
+    // when
+    await user.click(screen.getAllByRole('button', { name: /2025-.*완료한 작업 [1-9]/ })[0])
+    // then
+    expect(within(screen.getByRole('list')).getAllByRole('button').every(button => within(button).getByText('프로젝트2 / Login').textContent === '프로젝트2 / Login')).toBe(true)
+  })
+
+  it('board_menu_sidebar_home_and_mobile_toggle_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<MainPage today={TODAY} />)
+    await openProject(user)
+    // when
+    await user.click(screen.getByRole('button', { name: 'WORKSPACE' }))
+    await user.click(screen.getByRole('button', { name: 'BOARD' }))
+    // then
+    expect(screen.getByRole('region', { name: '보드' })).toBeVisible()
+    // when
+    await user.click(within(screen.getByRole('complementary')).getByRole('button', { name: '작업 현황' }))
+    await user.click(screen.getByRole('button', { name: '모바일 메뉴 열기' }))
+    await user.click(screen.getByRole('button', { name: '모바일 메뉴 접기' }))
+    // then
+    expect(screen.getByRole('tab', { name: '작업 현황' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: '모바일 메뉴 열기' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('desktop_sidebar_toggle_keeps_page_and_restores_navigation_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<MainPage today={TODAY} />)
+    // when
+    await user.click(screen.getByRole('button', { name: '사이드바 접기' }))
+    // then
+    expect(screen.getByRole('button', { name: '사이드바 펼치기' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('tabpanel', { name: '작업 현황' })).toBeVisible()
+    // when
+    await user.click(screen.getByRole('button', { name: '사이드바 펼치기' }))
+    // then
+    expect(screen.getByRole('button', { name: '사이드바 접기' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('complementary', { name: '워크스페이스 탐색' })).toBeVisible()
+  })
+
+  it('reorder_tabs_with_keyboard_preserves_active_page_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<MainPage today={TODAY} />)
+    await openProject(user)
+    const tab = screen.getByRole('tab', { name: '프로젝트1' })
+    // when
+    tab.focus()
+    await user.keyboard('{Alt>}{ArrowLeft}{/Alt}')
+    // then
+    expect(screen.getAllByRole('tab').map(item => item.textContent)).toEqual(['작업 현황', '프로젝트1', '프로젝트 리스트'])
+    expect(tab).toHaveAttribute('aria-selected', 'true')
+    expect(tab).toHaveFocus()
+  })
+
+  it('completed_task_opens_card_detail_and_returns_to_activity_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<MainPage today={TODAY} />)
+    await user.click(screen.getAllByRole('button', { name: /완료한 작업 [1-9]\d*개/ })[0])
+    const taskButton = within(screen.getByRole('list')).getAllByRole('button')[0]
+    const title = taskButton.getAttribute('aria-label')!.replace(' 카드 열기', '')
+    // when
+    await user.click(taskButton)
+    // then
+    expect(screen.getByRole('heading', { name: title, level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: title })).toHaveAttribute('aria-selected', 'true')
+    // when
+    await user.click(screen.getByRole('tab', { name: '작업 현황' }))
+    // then
+    expect(screen.getByRole('button', { name: `${title} 카드 열기` })).toBeVisible()
+  })
+
   it('workspace_tabs_support_keyboard_navigation_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     await openProject(user)
-    const home = screen.getByRole('tab', { name: '워크스페이스' })
+    const home = screen.getByRole('tab', { name: '작업 현황' })
     const projects = screen.getByRole('tab', { name: '프로젝트 리스트' })
     const project = screen.getByRole('tab', { name: '프로젝트1' })
     // then
@@ -48,7 +164,7 @@ describe('workspace', () => {
   it('common_document_save_updates_own_tab_label_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     await openProject(user)
     await user.click(screen.getByRole('button', { name: 'WORKSPACE' }))
     await user.click(screen.getByRole('button', { name: /0720 회의록.md/ }))
@@ -71,7 +187,7 @@ describe('workspace', () => {
   it.each(['card', 'common'])('document_tabs_preserve_unsaved_drafts_ok_%s', async (kind) => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     await openProject(user)
     if (kind === 'card') {
       await user.click(screen.getByRole('button', { name: /User 사용자 정보/ }))
@@ -88,7 +204,7 @@ describe('workspace', () => {
     await user.type(screen.getByRole('textbox', { name: titleLabel }), '미저장 제목')
     await user.clear(screen.getByRole('textbox', { name: 'Markdown 작성' }))
     await user.type(screen.getByRole('textbox', { name: 'Markdown 작성' }), '미저장 본문')
-    await user.click(screen.getByRole('tab', { name: '워크스페이스' }))
+    await user.click(screen.getByRole('tab', { name: '작업 현황' }))
     // then
     expect(screen.queryByRole('textbox', { name: 'Markdown 작성' })).not.toBeInTheDocument()
     // when
@@ -105,7 +221,7 @@ describe('workspace', () => {
   it('board_tabs_preserve_independent_layouts_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     await user.click(screen.getByRole('button', { name: '프로젝트1 User 보드' }))
     // when
     await user.click(screen.getByRole('button', { name: '가로 배치' }))
@@ -125,7 +241,7 @@ describe('workspace', () => {
   it('switch_and_close_screen_tabs_without_back_buttons_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     await openProject(user)
     await user.click(screen.getByRole('button', { name: /User.*사용자 정보/ }))
     // then
@@ -151,7 +267,7 @@ describe('workspace', () => {
   it('open_project_common_and_return_home_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     const sidebar = screen.getByRole('complementary', { name: '워크스페이스 탐색' })
     expect(within(sidebar).getByText('SPACE')).toBeInTheDocument()
     // when
@@ -183,17 +299,17 @@ describe('workspace', () => {
     expect(documentTab.id).not.toMatch(/\s/)
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', documentTab.id)
     // when
-    await user.click(screen.getByRole('tab', { name: '워크스페이스' }))
+    await user.click(screen.getByRole('tab', { name: '작업 현황' }))
     // then
-    expect(screen.getByRole('heading', { name: '작업 현황', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('tabpanel', { name: '워크스페이스' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '작업 활동', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('tabpanel', { name: '작업 현황' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: '프로젝트 메뉴 선택' })).not.toBeInTheDocument()
   })
 
   it('open_card_from_board_list_and_return_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     await openProject(user)
     expect(screen.queryByRole('button', { name: '세로 배치' })).not.toBeInTheDocument()
     // when
@@ -211,7 +327,7 @@ describe('workspace', () => {
   it('toggle_project_folder_by_name_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     const sidebar = screen.getByRole('complementary', { name: '워크스페이스 탐색' })
     // when
     await user.click(within(sidebar).getByText('프로젝트1', { exact: true }))
@@ -225,13 +341,13 @@ describe('workspace', () => {
   it('return_home_from_board_with_brand_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     await openProject(user)
     expect(screen.getByRole('heading', { name: 'User' })).toBeInTheDocument()
     // when
     await user.click(screen.getByRole('button', { name: 'w. Work Manager' }))
     // then
-    expect(screen.getByRole('heading', { name: '작업 현황', level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '작업 활동', level: 2 })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: '프로젝트 선택' })).toHaveValue('all')
     expect(screen.queryByRole('navigation', { name: '프로젝트 메뉴 선택' })).not.toBeInTheDocument()
   })
@@ -239,7 +355,7 @@ describe('workspace', () => {
   it('close_mobile_menu_on_navigation_and_escape_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     // when
     await user.click(screen.getByRole('button', { name: '모바일 메뉴 열기' }))
     await user.click(screen.getByRole('button', { name: '프로젝트1 User 보드' }))
@@ -257,7 +373,7 @@ describe('workspace', () => {
   it('trap_focus_inside_open_mobile_menu_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     const mobileMenuButton = screen.getByRole('button', { name: '모바일 메뉴 열기' })
     // when
     await user.click(mobileMenuButton)
@@ -276,7 +392,7 @@ describe('workspace', () => {
   it('trap_focus_with_collapsed_last_project_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     const mobileMenuButton = screen.getByRole('button', { name: '모바일 메뉴 열기' })
     await user.click(mobileMenuButton)
     const sidebar = screen.getByRole('complementary', { name: '워크스페이스 탐색' })
@@ -300,7 +416,7 @@ describe('workspace', () => {
   it('card_tabs_keep_board_layout_and_hide_back_button_ok', async () => {
     // given
     const user = userEvent.setup()
-    render(<Workspace today={TODAY} />)
+    render(<MainPage today={TODAY} />)
     await user.click(screen.getByRole('button', { name: '프로젝트2 User 보드' }))
     expect(screen.getByRole('heading', { name: '프로젝트2', level: 1 })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '세로 배치' })).toHaveAttribute('aria-pressed', 'true')
@@ -342,11 +458,11 @@ describe('workspace', () => {
     // given
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-09-30T14:59:59.000Z'))
-    const { unmount } = render(<Workspace today="2026-09-30" />)
+    const { unmount } = render(<MainPage today="2026-09-30" />)
     // when
     act(() => vi.advanceTimersByTime(2_000))
     // then
-    expect(screen.getByRole('heading', { name: '2026년 10월' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /2026년 작업 완료 \d+개/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /2026-10-01 오늘/ })).toHaveAttribute('aria-pressed', 'true')
     unmount()
     vi.useRealTimers()
