@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CardPage } from '@/components/card-page'
@@ -68,6 +68,31 @@ describe('card_create', () => {
     expect(screen.getByRole('button', { name: '담당자 변경' })).toHaveTextContent('김민수')
     expect(screen.getByRole('button', { name: '시작일 변경' })).toHaveTextContent('2026-10-14')
     expect(screen.getByRole('button', { name: '종료일 변경' })).toHaveTextContent('2026-10-15')
+  })
+
+  it('keyboard_expand_collapse_and_cancel_manage_focus_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="focus-board" />)
+    const trigger = screen.getByRole('button', { name: '시작 전 카드 추가' })
+    await user.click(trigger)
+    const expand = screen.getByRole('button', { name: '카드 추가 창 확대' })
+    // when
+    expand.focus()
+    await user.keyboard('{Enter}')
+    // then
+    await waitFor(() => expect(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' })).toHaveFocus())
+    // when
+    await user.keyboard('{Tab}{Enter}')
+    // then
+    expect(screen.getByRole('dialog', { name: '카드 추가' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' })).toHaveFocus())
+    // when
+    await user.click(screen.getByRole('button', { name: '카드 추가 창 확대' }))
+    await user.click(screen.getByRole('button', { name: '취소' }))
+    // then
+    expect(trigger).toHaveFocus()
+    expect(screen.queryByRole('region', { name: '새 카드 작성' })).not.toBeInTheDocument()
   })
 
   it('expanded_reversed_dates_preserve_draft_and_allow_correction_ok', async () => {

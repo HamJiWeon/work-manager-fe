@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useState, type FormEvent, type RefObject } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { Dialog } from '@base-ui/react/dialog'
 import { CalendarDays, Maximize2, Minimize2, Plus, Users } from 'lucide-react'
@@ -20,6 +20,14 @@ export function CardCreate({ boardId, expansionContainer }: { boardId: string; e
   const [endDate, setEndDate] = useState('')
   const [error, setError] = useState<CardCreateError | null>(null)
   const fieldId = useId()
+  const titleInput = useRef<HTMLInputElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const wasOpen = useRef(false)
+  useLayoutEffect(() => {
+    if (open && expanded) titleInput.current?.focus()
+    else if (!open && wasOpen.current) trigger.current?.focus()
+    wasOpen.current = open
+  }, [open, expanded])
   const handleSave = (content: string) => {
     if (!title.trim()) { setError({ type: 'title', message: '제목을 입력해 주세요.' }); return }
     if (startDate && endDate && startDate > endDate) { setError({ type: 'period', message: '종료일은 시작일 이후로 지정해 주세요.' }); return }
@@ -38,7 +46,7 @@ export function CardCreate({ boardId, expansionContainer }: { boardId: string; e
   const form = <form aria-label="카드 추가 입력" aria-describedby={error?.type === 'form' ? `${fieldId}-error` : undefined} className={expanded ? 'card-document card-create-page-editor' : undefined} onSubmit={handleSubmit}>
     <div className={expanded ? 'card-document-heading' : undefined}>
       <div><label className={expanded ? 'sr-only' : undefined} htmlFor={`${fieldId}-title`}>제목 <span>(필수)</span></label>
-      <input id={`${fieldId}-title`} className={expanded ? 'card-document-title' : undefined} aria-label="시작 전 새 카드 제목" placeholder="카드 제목을 입력하세요" value={title} onChange={event => { setTitle(event.target.value); setError(current => current?.type === 'title' ? null : current) }} aria-invalid={error?.type === 'title'} aria-describedby={error?.type === 'title' ? `${fieldId}-error` : undefined} /></div>
+      <input ref={titleInput} id={`${fieldId}-title`} className={expanded ? 'card-document-title' : undefined} aria-label="시작 전 새 카드 제목" placeholder="카드 제목을 입력하세요" value={title} onChange={event => { setTitle(event.target.value); setError(current => current?.type === 'title' ? null : current) }} aria-invalid={error?.type === 'title'} aria-describedby={error?.type === 'title' ? `${fieldId}-error` : undefined} /></div>
       {expanded && <div className="card-document-actions"><button type="button" className="icon-button" aria-label="카드 추가 창 축소" onClick={() => setExpanded(false)}><Minimize2 size={18} aria-hidden="true" /></button><button type="button" onClick={() => handleOpenChange(false)}>취소</button><button type="submit" className="card-document-save">저장</button></div>}
     </div>
     <label className={expanded ? 'sr-only' : undefined} htmlFor={`${fieldId}-content`}>내용</label>
@@ -48,10 +56,10 @@ export function CardCreate({ boardId, expansionContainer }: { boardId: string; e
     {!expanded && <div className="board-dialog-actions"><button type="button" onClick={() => handleOpenChange(false)}>취소</button><button type="submit" className="board-create-button">추가</button></div>}
   </form>
   return <div className="card-create"><Dialog.Root open={open && !expanded} onOpenChange={handleOpenChange}>
-    <Dialog.Trigger className="card-add-button" aria-label="시작 전 카드 추가"><Plus size={15} aria-hidden="true" />카드 추가</Dialog.Trigger>
+    <Dialog.Trigger ref={trigger} className="card-add-button" aria-label="시작 전 카드 추가"><Plus size={15} aria-hidden="true" />카드 추가</Dialog.Trigger>
     {open && !expanded && <Dialog.Portal>
       <Dialog.Backdrop className="board-dialog-backdrop" />
-      <Dialog.Popup className="board-dialog card-create-dialog">
+      <Dialog.Popup initialFocus={titleInput} finalFocus={false} className="board-dialog card-create-dialog">
         <div className="card-create-dialog-heading"><Dialog.Title className="board-dialog-title">카드 추가</Dialog.Title><button type="button" className="icon-button" aria-label="카드 추가 창 확대" onClick={() => setExpanded(true)}><Maximize2 size={18} aria-hidden="true" /></button></div>
         <Dialog.Description className="board-dialog-description">제목과 내용을 입력하면 시작 전 목록에 추가됩니다.</Dialog.Description>
         {form}
