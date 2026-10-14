@@ -26,6 +26,23 @@ describe('card_details', () => {
     expect(screen.getByRole('button', { name: '종료일 변경' })).toHaveTextContent('날짜 미지정')
   })
 
+  it('blur_closes_assignee_and_date_editors_without_changes_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardDetails card={CARD} />)
+    // when
+    await user.click(screen.getByRole('button', { name: '담당자 변경' }))
+    await user.tab()
+    // then
+    expect(screen.queryByRole('combobox', { name: '담당자' })).not.toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: '시작일 변경' }))
+    await user.tab()
+    // then
+    expect(screen.getByRole('button', { name: '시작일 변경' })).toHaveTextContent('2026-10-12')
+    expect(localStorage.length).toBe(0)
+  })
+
   it('storage_failure_preserves_assignee_and_retry_saves_ok', async () => {
     // given
     const user = userEvent.setup()

@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CommonPage } from '@/components/common-page'
+import { WorkspacePage } from '@/components/workspace-page'
 
 function CommonWorkspace({ projectId = 'project-1' }: { projectId?: string }) {
   const [document, setDocument] = useState<string | null>(null)
-  return <CommonPage projectId={projectId} document={document} onOpenDocument={setDocument} onBack={() => setDocument(null)} />
+  return <WorkspacePage projectId={projectId} document={document} onOpenDocument={setDocument} onBack={() => setDocument(null)} />
 }
 
 beforeEach(() => localStorage.clear())
@@ -15,7 +15,7 @@ describe('workspace_markdown', () => {
   it('edit_title_shortcut_save_preview_and_restore_ok', async () => {
     // given
     const user = userEvent.setup()
-    const view = render(<CommonWorkspace />)
+    let view = render(<CommonWorkspace />)
     await user.click(screen.getByRole('button', { name: /0720 회의록.md/ }))
     // when
     await user.clear(screen.getByRole('textbox', { name: '문서 제목' }))
@@ -29,7 +29,9 @@ describe('workspace_markdown', () => {
     expect(screen.getByText('meeting').tagName).toBe('CODE')
     expect(screen.queryByText('COMMON / DOCUMENTS')).not.toBeInTheDocument()
     // when
-    await user.click(screen.getByRole('button', { name: '← 공통 문서 목록' }))
+    expect(screen.queryByRole('button', { name: '← 공통 문서 목록' })).not.toBeInTheDocument()
+    view.unmount()
+    view = render(<CommonWorkspace />)
     expect(screen.getByRole('button', { name: /회의 정리.md/ })).toBeInTheDocument()
     view.unmount()
     render(<CommonWorkspace />)
@@ -48,12 +50,14 @@ describe('workspace_markdown', () => {
   it('documents_and_projects_are_isolated_ok', async () => {
     // given
     const user = userEvent.setup()
-    const view = render(<CommonWorkspace />)
+    let view = render(<CommonWorkspace />)
     await user.click(screen.getByRole('button', { name: /0720 회의록.md/ }))
     await user.type(screen.getByRole('textbox', { name: 'Markdown 작성' }), '첫 프로젝트 문서')
     await user.click(screen.getByRole('button', { name: '저장' }))
     // when
-    await user.click(screen.getByRole('button', { name: '← 공통 문서 목록' }))
+    expect(screen.queryByRole('button', { name: '← 공통 문서 목록' })).not.toBeInTheDocument()
+    view.unmount()
+    view = render(<CommonWorkspace />)
     await user.click(screen.getByRole('button', { name: /커밋 컨벤션.md/ }))
     // then
     expect(screen.getByRole('textbox', { name: 'Markdown 작성' })).toHaveValue('')
