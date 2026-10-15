@@ -1,14 +1,35 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import Page from '@/app/page'
+import HomePage from '@/app/page'
+import OAuthCallbackPage from '@/app/oauth/callback/page'
+import Page from '@/app/workspace/page'
 import RootLayout from '@/app/layout'
 import { WorkspacePage } from '@/components/workspace-page'
 import { CardPage } from '@/components/card-page'
 
 vi.mock('@vercel/analytics/next', () => ({ Analytics: () => <span>analytics</span> }))
+vi.mock('next/navigation', async importOriginal => ({
+  ...await importOriginal<typeof import('next/navigation')>(),
+  useRouter: () => ({ replace: vi.fn() }),
+}))
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs() })
 
 describe('server_render', () => {
+  it('oauth_callback_checks_authentication_before_navigation_ok', () => {
+    // when / then
+    expect(renderToStaticMarkup(<OAuthCallbackPage />)).toContain('로그인 확인 중')
+  })
+
+  it('home_redirects_to_login_ok', () => {
+    // when / then
+    expect(() => HomePage()).toThrow('NEXT_REDIRECT')
+    try {
+      HomePage()
+    } catch (error) {
+      expect(error).toHaveProperty('digest', 'NEXT_REDIRECT;replace;/login;307;')
+    }
+  })
+
   it('page_uses_seoul_date_and_default_activity_ok', () => {
     // given
     vi.useFakeTimers()
@@ -16,8 +37,9 @@ describe('server_render', () => {
     // when
     const html = renderToStaticMarkup(<Page />)
     // then
-    expect(html).toContain('2027년 작업 완료')
-    expect(html).toContain('2027-01-01 오늘')
+    expect(Page().props.today).toBe('2027-01-01')
+    expect(html).toContain('로그인 확인 중')
+    expect(html).not.toContain('2027년 작업 완료')
   })
 
   it('layout_wraps_content_with_korean_document_ok', () => {

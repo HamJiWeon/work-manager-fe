@@ -13,6 +13,7 @@ import {SAMPLE_BOARD_ITEMS, type BoardItem} from '@/lib/board'
 import type {CardItem} from '@/lib/card'
 import {CardDocument} from './card-document'
 import {useCardMotion} from '@/hooks/use-card-motion'
+import type {AuthUser} from '@/lib/auth'
 
 interface WorkspaceTab {
     id: string
@@ -41,7 +42,7 @@ function reorderTabs(tabs: WorkspaceTab[], sourceId: string, targetId: string, a
 }
 
 /** 프로젝트 탐색과 활동 조회를 제공한다. 데이터는 API 연결 전의 예시다. */
-export function MainPage({today: initialToday}: { today: string }) {
+export function MainPage({today: initialToday, user, onLogout, loggingOut = false}: { today: string; user?: AuthUser; onLogout?: () => void; loggingOut?: boolean }) {
     const [tabs, setTabs] = useState<WorkspaceTab[]>([HOME_TAB])
     const tabList = useRef<HTMLDivElement>(null)
     const [activeTabId, setActiveTabId] = useState(HOME_TAB.id)
@@ -219,8 +220,10 @@ export function MainPage({today: initialToday}: { today: string }) {
                 </details>)}
             </section>
 
-            <div className="sidebar-footer"><span className="avatar">M</span>
-                <div>나의 워크스페이스<small>Personal workspace</small></div>
+            <div className="sidebar-footer"><span className="avatar">{user?.name.slice(0, 1) ?? 'M'}</span>
+                <div>{user?.name ?? '나의 워크스페이스'}<small>{user?.email ?? 'Personal workspace'}</small>
+                    {onLogout && <button type="button" disabled={loggingOut} onClick={onLogout}>{loggingOut ? '로그아웃 중…' : '로그아웃'}</button>}
+                </div>
             </div>
         </aside>
         <div className="main-shell">
