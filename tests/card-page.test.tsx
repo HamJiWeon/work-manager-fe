@@ -71,7 +71,8 @@ describe('card_page', () => {
     const trigger = screen.getByRole('button', { name: '가로 배치' })
     // when
     await user.click(trigger)
-    await user.keyboard('{Tab}')
+    expect(screen.getByRole('menuitemradio', { name: '가로 배치' })).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
     // then
     expect(screen.getByRole('menuitemradio', { name: '세로 배치' })).toHaveFocus()
     expect(trigger.closest('details')).toHaveAttribute('open')
@@ -84,10 +85,40 @@ describe('card_page', () => {
     // when
     view.rerender(<CardPage boardId="layout-board" layout="vertical" onLayoutChange={onLayoutChange} />)
     await user.click(screen.getByRole('button', { name: '세로 배치' }))
-    await user.keyboard('{Tab}{Escape}')
+    await user.keyboard('{Escape}')
     // then
     expect(screen.getByRole('button', { name: '세로 배치' })).toHaveFocus()
     expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
+  })
+
+  it('layout_menu_roving_focus_home_end_and_tab_close_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="keyboard-layout" />)
+    const trigger = screen.getByRole('button', { name: '세로 배치' })
+    // when
+    trigger.focus()
+    await user.keyboard('{ArrowDown}')
+    // then
+    const vertical = screen.getByRole('menuitemradio', { name: '세로 배치' })
+    const horizontal = screen.getByRole('menuitemradio', { name: '가로 배치' })
+    expect(vertical).toHaveFocus()
+    expect(vertical).toHaveAttribute('tabindex', '0')
+    expect(horizontal).toHaveAttribute('tabindex', '-1')
+    // when / then
+    await user.keyboard('{ArrowUp}')
+    expect(horizontal).toHaveFocus()
+    expect(vertical).toHaveAttribute('tabindex', '-1')
+    await user.keyboard('{Home}')
+    expect(vertical).toHaveFocus()
+    await user.keyboard('{End}')
+    expect(horizontal).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    expect(vertical).toHaveFocus()
+    await user.keyboard('{Tab}')
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(vertical).toHaveAttribute('tabindex', '-1')
+    expect(horizontal).toHaveAttribute('tabindex', '-1')
   })
 
   it.each([

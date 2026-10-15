@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, ChevronDown, Columns3, Rows3 } from 'lucide-react'
+import { ArrowRight, ChevronDown } from 'lucide-react'
 import type { DragEvent, FormEvent, RefObject } from 'react'
 import { CARD_STATUSES, CARD_STATUS_LABELS, formatCardCode, formatCardDate, getMemberAvatarUrl, loadSampleCardPage } from '@/lib/card'
 import type { CardItem, CardPageLoader, CardStatus } from '@/lib/card'
 import { useCardPages } from '@/hooks/use-card-pages'
 import { CardDocument } from '@/components/card-document'
 import { CardFilters } from '@/components/card-filters'
+import { CardLayoutMenu } from '@/components/card-layout-menu'
 import { CardCreate } from '@/components/card-create'
 import { useCreatedCards } from '@/hooks/use-created-cards'
 import Image from 'next/image'
@@ -249,13 +250,7 @@ export function CardPage({ boardId, boardName, onOpenCard, layout: preferredLayo
 
     <p className="sr-only" aria-live="polite">{announcement}</p>
     <div className="card-controls"><CardFilters key={boardId} />{selectedCard?.boardId === boardId && <p className="card-move-hint"><span className="selected-card-dot" />{selectedCard.title} 선택됨 <button onClick={() => setSelectedCard(null)}>선택 해제</button></p>}
-    <details className="card-toolbar" onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus() } }}>
-      <summary role="button" aria-label={layout === 'vertical' ? '세로 배치' : '가로 배치'} aria-haspopup="menu" aria-pressed="true">{layout === 'vertical' ? <Columns3 size={15} aria-hidden="true" /> : <Rows3 size={15} aria-hidden="true" />}{layout === 'vertical' ? '세로 배치' : '가로 배치'}<ChevronDown size={14} aria-hidden="true" /></summary>
-      <div className="card-layout-menu" role="menu" aria-label="상태 배치 선택">
-        <button role="menuitemradio" aria-checked={layout === 'vertical'} onClick={event => { handleLayoutChange('vertical'); const details = event.currentTarget.closest('details'); if (details) { details.open = false; details.querySelector('summary')?.focus() } }}><Columns3 size={15} aria-hidden="true" />세로 배치</button>
-        <button role="menuitemradio" aria-checked={layout === 'horizontal'} onClick={event => { handleLayoutChange('horizontal'); const details = event.currentTarget.closest('details'); if (details) { details.open = false; details.querySelector('summary')?.focus() } }}><Rows3 size={15} aria-hidden="true" />가로 배치</button>
-      </div>
-    </details>
+    <CardLayoutMenu layout={layout} onLayoutChange={handleLayoutChange} />
     </div>
     <div ref={cardLayout} className={`card-status-layout ${layout}`} onDragEnd={() => handleDragCard(null)} onKeyDown={event => { if (event.key === 'Escape') handleDragCard(null) }}>
       {CARD_STATUSES.map(status => <CardStatusSection expansionContainer={expansionContainer} key={`${boardId}-${status}`} boardId={boardId} status={status} loadPage={loadPage} layout={layout} order={cardOrders[`${boardId}:${status}`] ?? []} movedCards={movedCards} createdCards={createdCards} documents={documents} selectedCard={selectedCard?.boardId === boardId ? selectedCard : null} draggedCard={draggedCard?.boardId === boardId ? draggedCard : null} onOpenCard={onOpenCard ?? setOpenedCard} onSelectCard={handleSelectCard} dropPreview={dropPreview} onPreviewChange={handlePreviewChange} onDragCard={handleDragCard} onMoveCard={handleMoveCard} />)}
