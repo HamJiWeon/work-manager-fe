@@ -73,7 +73,7 @@ describe('card_create', () => {
     await user.type(screen.getByLabelText(label), '202020-02-20')
     // then
     expect(screen.getByLabelText(label)).toHaveValue('')
-    expect(screen.getByRole('alert')).toHaveTextContent('날짜의 연도는 1~9999년으로 입력해 주세요.')
+    expect(screen.getByRole('alert')).toHaveTextContent('1~9999년 범위의 올바른 날짜를 입력해 주세요.')
     // when
     await user.type(screen.getByLabelText(label), '2020-02-20')
     // then
@@ -93,7 +93,7 @@ describe('card_create', () => {
     await user.click(screen.getByRole('button', { name: '추가' }))
     // then
     expect(screen.getByRole('dialog', { name: '카드 추가' })).toBeInTheDocument()
-    expect(screen.getByRole('alert')).toHaveTextContent('날짜의 연도는 1~9999년으로 입력해 주세요.')
+    expect(screen.getByRole('alert')).toHaveTextContent('1~9999년 범위의 올바른 날짜를 입력해 주세요.')
     expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'true')
     expect(screen.queryByRole('button', { name: '거부 날짜 카드 열기' })).not.toBeInTheDocument()
     // when
@@ -118,7 +118,7 @@ describe('card_create', () => {
     // then
     expect(screen.getByRole('region', { name: '새 카드 작성' })).toBeInTheDocument()
     expect(screen.getByLabelText('시작일')).toHaveValue('2026-10-14')
-    expect(screen.getByRole('alert')).toHaveTextContent('날짜의 연도는 1~9999년으로 입력해 주세요.')
+    expect(screen.getByRole('alert')).toHaveTextContent('1~9999년 범위의 올바른 날짜를 입력해 주세요.')
     // when
     await user.clear(screen.getByLabelText('시작일'))
     await user.click(screen.getByRole('button', { name: '저장' }))

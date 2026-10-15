@@ -102,8 +102,30 @@ describe('card_storage', () => {
 
   it.each(['startDate', 'endDate'] as const)('created_card_rejects_six_digit_year_ko_%s', field => {
     // given / when / then
-    expect(() => createCard('board', '날짜 검증', '', { [field]: '202020-02-20' })).toThrow('날짜의 연도는 1~9999년으로 입력해 주세요.')
+    expect(() => createCard('board', '날짜 검증', '', { [field]: '202020-02-20' })).toThrow('1~9999년 범위의 올바른 날짜를 입력해 주세요.')
     expect(readCreatedCards('board')).toEqual([])
+  })
+
+  it.each([
+    { startDate: '2026-02-31' },
+    { endDate: '2026-99-99' },
+    { startDate: '2026-02-29' },
+    { endDate: '1900-02-29' },
+  ])('created_card_rejects_impossible_calendar_date_without_changing_storage_ko_%#', details => {
+    // given
+    const existing = createCard('board', '기존 카드')
+    // when / then
+    expect(() => createCard('board', '잘못된 날짜', '', details)).toThrow('1~9999년 범위의 올바른 날짜를 입력해 주세요.')
+    expect(readCreatedCards('board')).toEqual([existing])
+  })
+
+  it('created_card_saves_and_restores_valid_leap_day_ok', () => {
+    // given / when
+    const card = createCard('board', '윤년 일정', '', { startDate: '2000-02-29', endDate: '2024-02-29' })
+    // then
+    expect(readCreatedCards('board')).toEqual([card])
+    expect(card.startDate).toBe('2000-02-29')
+    expect(card.endDate).toBe('2024-02-29')
   })
 
   it('created_card_rejects_reversed_dates_without_changing_saved_cards_ko', () => {
