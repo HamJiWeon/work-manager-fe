@@ -1,9 +1,6 @@
-import { MainPage } from '@/components/main-page'
-import { getToday } from '@/lib/activity'
+import { redirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
-/** 요청 시점의 서울 날짜를 기준으로 작업 현황을 표시한다. */
+/** 기본 주소로 접속하면 로그인 페이지로 이동한다. */
 export default function Page() {
-  return <MainPage today={getToday()} />
+  redirect('/login')
 }

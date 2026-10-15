@@ -1,0 +1,15 @@
+.panel { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100dvh; max-width: 680px; margin: 0 auto; padding: 48px 24px; text-align: center; }
+.panel h1 { font-size: 28px; }
+.panel p { color: #5c6f7c; line-height: 1.8; }
+.actions { display: flex; justify-content: center; gap: 16px; margin-top: 16px; }
+.button { display: inline-block; border-radius: 8px; padding: 12px 20px; background: #335e7d; color: white; font: inherit; }
+.button:disabled { opacity: .5; cursor: not-allowed; }
+.form { width: 100%; margin-top: 24px; text-align: left; }
+.term { padding: 20px 0; border-top: 1px solid #dce4e9; }
+.term label { display: flex; align-items: center; gap: 10px; font-size: 15px; line-height: 1.7; }
+.term input { width: 18px; height: 18px; accent-color: #335e7d; }
+.term details { margin: 12px 0 0 28px; color: #5c6f7c; font-size: 13px; }
+.term summary { cursor: pointer; }
+.term p { max-height: 240px; overflow-y: auto; white-space: pre-wrap; }
+.notice { padding: 12px 20px; background: #fff5e5; color: #6c4822; font-size: 13px; }
+.notice button { margin-left: 16px; text-decoration: underline; }
