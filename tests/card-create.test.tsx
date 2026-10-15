@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CardPage } from '@/components/card-page'
@@ -79,6 +79,52 @@ describe('card_create', () => {
     // then
     expect(screen.getByLabelText(label)).toHaveValue('2020-02-20')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it.each(['시작일', '종료일'])('rejected_date_blocks_save_after_other_field_changes_ok_%s', async label => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="rejected-date" />)
+    await user.click(screen.getByRole('button', { name: '시작 전 카드 추가' }))
+    await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), '거부 날짜')
+    // when
+    await user.type(screen.getByLabelText(label), '202020-02-20')
+    await user.type(screen.getByLabelText(label === '시작일' ? '종료일' : '시작일'), '2026-10-15')
+    await user.click(screen.getByRole('button', { name: '추가' }))
+    // then
+    expect(screen.getByRole('dialog', { name: '카드 추가' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('날짜의 연도는 1~9999년으로 입력해 주세요.')
+    expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.queryByRole('button', { name: '거부 날짜 카드 열기' })).not.toBeInTheDocument()
+    // when
+    await user.type(screen.getByLabelText(label), '2026-10-15')
+    await user.click(screen.getByRole('button', { name: '추가' }))
+    // then
+    expect(await screen.findByRole('button', { name: '거부 날짜 카드 열기' })).toBeInTheDocument()
+  })
+
+  it('rejected_existing_date_blocks_shortcut_until_explicitly_cleared_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="rejected-existing" />)
+    await user.click(screen.getByRole('button', { name: '시작 전 카드 추가' }))
+    await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), '이전 날짜')
+    await user.type(screen.getByLabelText('시작일'), '2026-10-14')
+    // when
+    fireEvent.change(screen.getByLabelText('시작일'), { target: { value: '202020-02-20' } })
+    await user.click(screen.getByRole('button', { name: '카드 추가 창 확대' }))
+    await user.click(screen.getByRole('textbox', { name: '내용' }))
+    await user.keyboard('{Control>}s{/Control}')
+    // then
+    expect(screen.getByRole('region', { name: '새 카드 작성' })).toBeInTheDocument()
+    expect(screen.getByLabelText('시작일')).toHaveValue('2026-10-14')
+    expect(screen.getByRole('alert')).toHaveTextContent('날짜의 연도는 1~9999년으로 입력해 주세요.')
+    // when
+    await user.clear(screen.getByLabelText('시작일'))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    // then
+    const card = await screen.findByRole('button', { name: '이전 날짜 카드 열기' })
+    expect(within(card).getByLabelText('작업 기간')).toHaveTextContent('시작일 미지정~종료일 미지정')
   })
 
   it('expand_collapse_preserves_draft_and_saves_markdown_ok', async () => {
