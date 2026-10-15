@@ -2,7 +2,7 @@ import { act, createEvent, fireEvent, render, screen, waitFor, within } from '@t
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CardPage } from '@/components/card-page'
-import type { CardPageLoader } from '@/lib/card'
+import type { CardItem, CardPageLoader } from '@/lib/card'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -20,6 +20,7 @@ describe('card_page', () => {
     // then
     expect(within(card).getByLabelText('카드 코드')).toHaveTextContent(/^PJT-1$/)
     expect(within(screen.getByRole('button', { name: 'Team 작업 2 카드 열기' })).getByLabelText('카드 코드')).toHaveTextContent(/^PJT-2$/)
+    expect(within(card).getByLabelText('작업 기간')).toHaveTextContent('시작일 미지정~종료일 미지정')
     expect(within(card).queryByLabelText('카드 번호')).not.toBeInTheDocument()
     expect(within(card.closest('article')!).queryByText('이동')).not.toBeInTheDocument()
     expect(within(card.closest('article')!).getAllByRole('button')).toHaveLength(1)
@@ -44,13 +45,106 @@ describe('card_page', () => {
     render(<CardPage boardId="project1" />)
     // then
     expect(screen.getByRole('button', { name: '세로 배치' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
+    expect(screen.queryByRole('button', { name: '가로 배치' })).not.toBeInTheDocument()
     for (const label of ['시작 전', '진행 중', '완료']) {
       expect(screen.getByRole('region', { name: `${label} 카드 목록` })).toHaveAttribute('tabindex', '0')
     }
     // when
-    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    expect(screen.getByRole('menuitemradio', { name: '세로 배치' })).toHaveAttribute('aria-checked', 'true')
+    await user.click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     // then
     expect(screen.getByRole('button', { name: '가로 배치' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
+    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
+    expect(screen.getByRole('button', { name: '가로 배치' })).toHaveFocus()
+  })
+
+  it('layout_menu_keyboard_selection_and_escape_restore_focus_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    const onLayoutChange = vi.fn()
+    const view = render(<CardPage boardId="layout-board" layout="horizontal" onLayoutChange={onLayoutChange} />)
+    const trigger = screen.getByRole('button', { name: '가로 배치' })
+    // when
+    await user.click(trigger)
+    expect(screen.getByRole('menuitemradio', { name: '가로 배치' })).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    // then
+    expect(screen.getByRole('menuitemradio', { name: '세로 배치' })).toHaveFocus()
+    expect(trigger.closest('details')).toHaveAttribute('open')
+    // when
+    await user.keyboard('{Enter}')
+    // then
+    expect(onLayoutChange).toHaveBeenCalledWith('vertical')
+    expect(trigger.closest('details')).not.toHaveAttribute('open')
+    expect(trigger).toHaveFocus()
+    // when
+    view.rerender(<CardPage boardId="layout-board" layout="vertical" onLayoutChange={onLayoutChange} />)
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.keyboard('{Escape}')
+    // then
+    expect(screen.getByRole('button', { name: '세로 배치' })).toHaveFocus()
+    expect(screen.getByRole('menu', { name: '상태 배치 선택' }).closest('details')).not.toHaveAttribute('open')
+  })
+
+  it('layout_menu_roving_focus_home_end_and_tab_close_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="keyboard-layout" />)
+    const trigger = screen.getByRole('button', { name: '세로 배치' })
+    // when
+    trigger.focus()
+    await user.keyboard('{ArrowDown}')
+    // then
+    const vertical = screen.getByRole('menuitemradio', { name: '세로 배치' })
+    const horizontal = screen.getByRole('menuitemradio', { name: '가로 배치' })
+    expect(vertical).toHaveFocus()
+    expect(vertical).toHaveAttribute('tabindex', '0')
+    expect(horizontal).toHaveAttribute('tabindex', '-1')
+    // when / then
+    await user.keyboard('{ArrowUp}')
+    expect(horizontal).toHaveFocus()
+    expect(vertical).toHaveAttribute('tabindex', '-1')
+    await user.keyboard('{Home}')
+    expect(vertical).toHaveFocus()
+    await user.keyboard('{End}')
+    expect(horizontal).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    expect(vertical).toHaveFocus()
+    await user.keyboard('{Tab}')
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(vertical).toHaveAttribute('tabindex', '-1')
+    expect(horizontal).toHaveAttribute('tabindex', '-1')
+  })
+
+  it.each([
+    { startDate: '2026-10-14', endDate: '2026-10-15', startLabel: '26-10-14', endLabel: '26-10-15' },
+    { startDate: '2026-10-14', startLabel: '26-10-14', endLabel: '종료일 미지정' },
+    { endDate: '2026-10-15', startLabel: '시작일 미지정', endLabel: '26-10-15' },
+    { startLabel: '시작일 미지정', endLabel: '종료일 미지정' },
+  ])('card_and_move_preview_display_dates_ok_%#', async ({ startDate, endDate, startLabel, endLabel }) => {
+    // given
+    const card: CardItem = { id: 'dated-card', boardId: 'dates-board', cardNumber: 1, projectCode: 'PJT', title: '기간 카드', content: '', memberName: '나', status: 'NOT_STARTED', startDate, endDate }
+    const loadPage: CardPageLoader = async (_boardId, status) => ({ items: status === 'NOT_STARTED' ? [card] : [], nextCursor: null })
+    render(<CardPage boardId="dates-board" loadPage={loadPage} />)
+    const source = await screen.findByRole('button', { name: '기간 카드 카드 열기' })
+    // then
+    expect(within(source).getByLabelText('작업 기간')).toHaveTextContent(`${startLabel}~${endLabel}`)
+    // when
+    fireEvent.dragStart(source.closest('article')!, { dataTransfer: { setData: vi.fn() } })
+    fireEvent.dragOver(screen.getByRole('region', { name: '진행 중 카드 목록' }), { dataTransfer: {} })
+    // then
+    const preview = screen.getByRole('article', { name: '기간 카드 이동 미리보기' })
+    expect(within(preview).getByLabelText('작업 기간')).toHaveTextContent(`${startLabel}~${endLabel}`)
+    // when
+    fireEvent.dragEnd(source.closest('article')!)
+    // then
+    expect(screen.queryByRole('article', { name: '기간 카드 이동 미리보기' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '기간 카드 카드 열기' })).toBeInTheDocument()
   })
 
   it('scroll_loads_only_its_status_and_stops_at_end_ok', async () => {
@@ -71,7 +165,8 @@ describe('card_page', () => {
     await within(todo).findByRole('heading', { name: 'Team' })
     await waitFor(() => expect(observers.length).toBe(3))
     // when
-    await userEvent.setup().click(screen.getByRole('button', { name: '가로 배치' }))
+    await userEvent.setup().click(screen.getByRole('button', { name: '세로 배치' }))
+    await userEvent.setup().click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     const trigger = () => {
       const observer = observers.findLast(entry => !entry.disconnected && entry.target && todo.contains(entry.target))!
       observer.callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver)
@@ -107,7 +202,8 @@ describe('card_page', () => {
     await selectCardForMove(user, moved)
     await user.click(screen.getByLabelText('완료 위치 지정'))
     await user.click(screen.getByRole('button', { name: '완료로 이동' }))
-    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     await user.click(within(todo).getByRole('button', { name: '시작 전 더 불러오기' }))
     // then
     await within(todo).findByRole('heading', { name: 'Team 작업 16' })
@@ -156,7 +252,8 @@ describe('card_page', () => {
     const progress = screen.getByRole('region', { name: '진행 중 카드 목록' })
     await user.click(within(progress).getByRole('button', { name: '진행 중 더 불러오기' }))
     await within(progress).findByRole('heading', { name: 'User 작업 16' })
-    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     // then
     expect(within(progress).getAllByRole('heading').slice(0, 2).map(element => element.textContent)).toEqual(['Team', 'User'])
     expect(within(todo).queryByRole('heading', { name: 'Team' })).not.toBeInTheDocument()
@@ -167,7 +264,8 @@ describe('card_page', () => {
     // given
     const user = userEvent.setup()
     render(<CardPage boardId="project1" />)
-    await user.click(screen.getByRole('button', { name: layout }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: layout }))
     const todo = screen.getByRole('region', { name: '시작 전 카드 목록' })
     const source = (await within(todo).findByRole('button', { name: 'Team 카드 열기' })).closest('article')!
     const target = within(todo).getByRole('button', { name: 'Team 작업 3 카드 열기' }).closest('li')!
@@ -196,7 +294,8 @@ describe('card_page', () => {
     // given
     const user = userEvent.setup()
     render(<CardPage boardId="project1" />)
-    await user.click(screen.getByRole('button', { name: layout }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: layout }))
     const todo = screen.getByRole('region', { name: '시작 전 카드 목록' })
     const progress = screen.getByRole('region', { name: '진행 중 카드 목록' })
     const source = (await within(todo).findByRole('button', { name: 'Team 카드 열기' })).closest('article')!
@@ -278,7 +377,8 @@ describe('card_page', () => {
     // given
     const user = userEvent.setup()
     render(<CardPage boardId="project1" />)
-    await user.click(screen.getByRole('button', { name: layout }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: layout }))
     const todo = screen.getByRole('region', { name: '시작 전 카드 목록' })
     const progress = screen.getByRole('region', { name: '진행 중 카드 목록' })
     const source = (await within(todo).findByRole('button', { name: 'Team 카드 열기' })).closest('article')!
@@ -328,7 +428,8 @@ describe('card_page', () => {
     // given
     const user = userEvent.setup()
     render(<CardPage boardId="project1" />)
-    await user.click(screen.getByRole('button', { name: layout }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: layout }))
     const todo = screen.getByRole('region', { name: '시작 전 카드 목록' })
     const source = (await within(todo).findByRole('button', { name: 'Team 카드 열기' })).closest('article')!
     const target = within(todo).getByRole('button', { name: 'Team 작업 2 카드 열기' }).closest('li')!

@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, ChevronDown, Columns3, Rows3 } from 'lucide-react'
-import type { DragEvent, FormEvent } from 'react'
+import { ArrowRight, ChevronDown } from 'lucide-react'
+import type { DragEvent, FormEvent, RefObject } from 'react'
 import { CARD_STATUSES, CARD_STATUS_LABELS, formatCardCode, formatCardDate, getMemberAvatarUrl, loadSampleCardPage } from '@/lib/card'
 import type { CardItem, CardPageLoader, CardStatus } from '@/lib/card'
 import { useCardPages } from '@/hooks/use-card-pages'
 import { CardDocument } from '@/components/card-document'
 import { CardFilters } from '@/components/card-filters'
+import { CardLayoutMenu } from '@/components/card-layout-menu'
 import { CardCreate } from '@/components/card-create'
 import { useCreatedCards } from '@/hooks/use-created-cards'
 import Image from 'next/image'
@@ -37,6 +38,7 @@ interface CardDropPreview {
 }
 
 interface CardStatusSectionProps {
+  expansionContainer: RefObject<HTMLDivElement | null>
   boardId: string
   loadPage: CardPageLoader
   status: CardStatus
@@ -55,7 +57,7 @@ interface CardStatusSectionProps {
   onMoveCard: (card: CardItem, status: CardStatus, orderedIds: string[]) => void
 }
 
-function CardStatusSection({ boardId, status, loadPage, layout, order, movedCards, createdCards, documents, selectedCard, draggedCard, dropPreview, onPreviewChange, onOpenCard, onSelectCard, onDragCard, onMoveCard }: CardStatusSectionProps) {
+function CardStatusSection({ expansionContainer, boardId, status, loadPage, layout, order, movedCards, createdCards, documents, selectedCard, draggedCard, dropPreview, onPreviewChange, onOpenCard, onSelectCard, onDragCard, onMoveCard }: CardStatusSectionProps) {
   const { items, loading, error, hasMore, handleLoadMore } = useCardPages(boardId, status, loadPage)
   const root = useRef<HTMLDivElement>(null)
   const sentinel = useRef<HTMLDivElement>(null)
@@ -173,18 +175,19 @@ function CardStatusSection({ boardId, status, loadPage, layout, order, movedCard
           {selectedCard.status !== status && <button className="card-quick-move" onClick={() => handlePlaceCard(selectedCard)}>{label}{status === 'DONE' ? '로' : '으로'} 이동</button>}
         </div>
       </details>}
+      {status === 'NOT_STARTED' && <CardCreate boardId={boardId} expansionContainer={expansionContainer} />}
     </div>
     <div className="card-scroll" ref={root} role="region" aria-label={`${label} 카드 목록`} tabIndex={0} aria-busy={loading}>
       <ul className="card-list">{renderItems.map(({ item, preview }) => preview ? <li key="drop-preview" className="card-preview-slot"
         onDragOver={event => { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move' }}
         onDrop={event => { event.stopPropagation(); handleDrop(event) }}>
         <article className="work-card card-drop-preview" aria-label={`${item.title} 이동 미리보기`}>
-          <div className="card-select-button"><span className="card-topline"><strong className="card-project-code" aria-label="카드 코드">{formatCardCode(item)}</strong><span className="card-preview-caption">이 위치에 놓기</span></span><h4>{item.title}</h4><span className="card-metadata">{(item.startDate || item.endDate) && <span className="card-date-summary" aria-label="작업 기간"><span>{item.startDate ? <time dateTime={item.startDate}>{formatCardDate(item.startDate)}</time> : '시작일 미지정'}</span><span aria-hidden="true">~</span><span>{item.endDate ? <time dateTime={item.endDate}>{formatCardDate(item.endDate)}</time> : '종료일 미지정'}</span></span>}<CardMemberAvatar card={item} /></span></div>
+          <div className="card-select-button"><span className="card-topline"><strong className="card-project-code" aria-label="카드 코드">{formatCardCode(item)}</strong><span className="card-preview-caption">이 위치에 놓기</span></span><h4>{item.title}</h4><span className="card-metadata">{<span className="card-date-summary" aria-label="작업 기간"><span>{item.startDate ? <time dateTime={item.startDate}>{formatCardDate(item.startDate)}</time> : '시작일 미지정'}</span><span aria-hidden="true">~</span><span>{item.endDate ? <time dateTime={item.endDate}>{formatCardDate(item.endDate)}</time> : '종료일 미지정'}</span></span>}<CardMemberAvatar card={item} /></span></div>
         </article>
       </li> : <li key={item.id} data-card-id={item.id} hidden={!!dropPreview && draggedCard?.id === item.id}
         onDragOver={handleDragOver} onDrop={handleDrop}><article className={`work-card ${selectedCard?.id === item.id ? 'selected' : ''} ${draggedCard?.id === item.id ? 'dragging' : ''}`} draggable
         onDragStart={event => { event.dataTransfer.setData('text/plain', item.id); event.dataTransfer.effectAllowed = 'move'; onDragCard(item) }}
-        onDragEnd={() => { onDragCard(null); onPreviewChange(null) }}><button className="card-select-button" aria-label={`${item.title} 카드 열기`} aria-pressed={selectedCard?.id === item.id} onClick={() => onOpenCard(item)} aria-keyshortcuts="Space" onKeyDown={event => { if (event.key === ' ') { event.preventDefault(); onSelectCard(item) } }}><span className="card-topline"><strong className="card-project-code" aria-label="카드 코드">{formatCardCode(item)}</strong></span><h4>{item.title}</h4><span className="card-metadata">{(item.startDate || item.endDate) && <span className="card-date-summary" aria-label="작업 기간"><span>{item.startDate ? <time dateTime={item.startDate}>{formatCardDate(item.startDate)}</time> : '시작일 미지정'}</span><span aria-hidden="true">~</span><span>{item.endDate ? <time dateTime={item.endDate}>{formatCardDate(item.endDate)}</time> : '종료일 미지정'}</span></span>}<CardMemberAvatar card={item} /></span></button></article>
+        onDragEnd={() => { onDragCard(null); onPreviewChange(null) }}><button className="card-select-button" aria-label={`${item.title} 카드 열기`} aria-pressed={selectedCard?.id === item.id} onClick={() => onOpenCard(item)} aria-keyshortcuts="Space" onKeyDown={event => { if (event.key === ' ') { event.preventDefault(); onSelectCard(item) } }}><span className="card-topline"><strong className="card-project-code" aria-label="카드 코드">{formatCardCode(item)}</strong></span><h4>{item.title}</h4><span className="card-metadata">{<span className="card-date-summary" aria-label="작업 기간"><span>{item.startDate ? <time dateTime={item.startDate}>{formatCardDate(item.startDate)}</time> : '시작일 미지정'}</span><span aria-hidden="true">~</span><span>{item.endDate ? <time dateTime={item.endDate}>{formatCardDate(item.endDate)}</time> : '종료일 미지정'}</span></span>}<CardMemberAvatar card={item} /></span></button></article>
       </li>)}</ul>
       <div aria-live="polite">
         {loading && <p role="status">카드를 불러오는 중입니다.</p>}
@@ -195,12 +198,12 @@ function CardStatusSection({ boardId, status, loadPage, layout, order, movedCard
       <div ref={sentinel} className="card-sentinel" aria-hidden="true" />
       {!loading && (error || hasMore) && <button className="card-load-more" onClick={handleLoadMore}>{error ? `${label} 다시 시도` : `${label} 더 불러오기`}</button>}
     </div>
-    <CardCreate boardId={boardId} status={status} />
   </section>
 }
 
 /** 보드별 상태 목록과 무한 스크롤을 제공하며 카드 클릭 시 별도 Markdown 상세 화면을 연다. 카드 이동의 서버 저장은 API 연동이 필요하다. */
 export function CardPage({ boardId, boardName, onOpenCard, layout: preferredLayout, onLayoutChange, loadPage = loadSampleCardPage }: CardPageProps) {
+  const expansionContainer = useRef<HTMLDivElement>(null)
   const [cardOrders, setCardOrders] = useState<Record<string, string[]>>({})
   const [movedCards, setMovedCards] = useState<Record<string, CardItem>>({})
   const [openedCard, setOpenedCard] = useState<CardItem | null>(null)
@@ -242,18 +245,15 @@ export function CardPage({ boardId, boardName, onOpenCard, layout: preferredLayo
     onLayoutChange?.(value)
   }
   return <>
-    <div hidden={openedCard !== null}>
+    <div ref={expansionContainer} className="card-page-content" hidden={openedCard !== null}>
     <div className="page-heading"><div><h2 className="project-overview-title">{boardName ?? `보드${boardId.slice(-1)}`}</h2></div><span className="sample-badge">예시 데이터</span></div>
 
     <p className="sr-only" aria-live="polite">{announcement}</p>
     <div className="card-controls"><CardFilters key={boardId} />{selectedCard?.boardId === boardId && <p className="card-move-hint"><span className="selected-card-dot" />{selectedCard.title} 선택됨 <button onClick={() => setSelectedCard(null)}>선택 해제</button></p>}
-    <div className="card-toolbar" role="group" aria-label="상태 배치 선택">
-      <button aria-pressed={layout === 'vertical'} onClick={() => handleLayoutChange('vertical')}><Columns3 size={15} aria-hidden="true" />세로 배치</button>
-      <button aria-pressed={layout === 'horizontal'} onClick={() => handleLayoutChange('horizontal')}><Rows3 size={15} aria-hidden="true" />가로 배치</button>
-    </div>
+    <CardLayoutMenu layout={layout} onLayoutChange={handleLayoutChange} />
     </div>
     <div ref={cardLayout} className={`card-status-layout ${layout}`} onDragEnd={() => handleDragCard(null)} onKeyDown={event => { if (event.key === 'Escape') handleDragCard(null) }}>
-      {CARD_STATUSES.map(status => <CardStatusSection key={`${boardId}-${status}`} boardId={boardId} status={status} loadPage={loadPage} layout={layout} order={cardOrders[`${boardId}:${status}`] ?? []} movedCards={movedCards} createdCards={createdCards} documents={documents} selectedCard={selectedCard?.boardId === boardId ? selectedCard : null} draggedCard={draggedCard?.boardId === boardId ? draggedCard : null} onOpenCard={onOpenCard ?? setOpenedCard} onSelectCard={handleSelectCard} dropPreview={dropPreview} onPreviewChange={handlePreviewChange} onDragCard={handleDragCard} onMoveCard={handleMoveCard} />)}
+      {CARD_STATUSES.map(status => <CardStatusSection expansionContainer={expansionContainer} key={`${boardId}-${status}`} boardId={boardId} status={status} loadPage={loadPage} layout={layout} order={cardOrders[`${boardId}:${status}`] ?? []} movedCards={movedCards} createdCards={createdCards} documents={documents} selectedCard={selectedCard?.boardId === boardId ? selectedCard : null} draggedCard={draggedCard?.boardId === boardId ? draggedCard : null} onOpenCard={onOpenCard ?? setOpenedCard} onSelectCard={handleSelectCard} dropPreview={dropPreview} onPreviewChange={handlePreviewChange} onDragCard={handleDragCard} onMoveCard={handleMoveCard} />)}
     </div>
     </div>
     {openedCard?.boardId === boardId && <CardDocument key={openedCard.id} card={openedCard} onSave={handleDocumentSave} onClose={() => setOpenedCard(null)} />}

@@ -270,7 +270,8 @@ describe('workspace', () => {
     render(<MainPage today={TODAY} />)
     await user.click(screen.getByRole('button', { name: '프로젝트1 User 보드' }))
     // when
-    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     await user.click(screen.getByRole('button', { name: '프로젝트2 Team 보드' }))
     // then
     expect(screen.getByRole('button', { name: '세로 배치' })).toHaveAttribute('aria-pressed', 'true')
@@ -467,7 +468,8 @@ describe('workspace', () => {
     expect(screen.getByRole('heading', { name: '프로젝트2', level: 1 })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '세로 배치' })).toHaveAttribute('aria-pressed', 'true')
     // when
-    await user.click(screen.getByRole('button', { name: '가로 배치' }))
+    await user.click(screen.getByRole('button', { name: '세로 배치' }))
+    await user.click(screen.getByRole('menuitemradio', { name: '가로 배치' }))
     await user.click(await screen.findByRole('button', { name: 'Team 카드 열기' }))
     // then
     expect(screen.getByRole('tab', { name: 'Team' })).toHaveAttribute('aria-selected', 'true')

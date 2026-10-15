@@ -100,18 +100,69 @@ describe('card_storage', () => {
     expect(cards).toEqual([saved])
   })
 
+  it.each(['startDate', 'endDate'] as const)('created_card_rejects_six_digit_year_ko_%s', field => {
+    // given / when / then
+    expect(() => createCard('board', '날짜 검증', '', { [field]: '202020-02-20' })).toThrow('1~9999년 범위의 올바른 날짜를 입력해 주세요.')
+    expect(readCreatedCards('board')).toEqual([])
+  })
+
+  it.each([
+    { startDate: '2026-02-31' },
+    { endDate: '2026-99-99' },
+    { startDate: '2026-02-29' },
+    { endDate: '1900-02-29' },
+  ])('created_card_rejects_impossible_calendar_date_without_changing_storage_ko_%#', details => {
+    // given
+    const existing = createCard('board', '기존 카드')
+    // when / then
+    expect(() => createCard('board', '잘못된 날짜', '', details)).toThrow('1~9999년 범위의 올바른 날짜를 입력해 주세요.')
+    expect(readCreatedCards('board')).toEqual([existing])
+  })
+
+  it('created_card_saves_and_restores_valid_leap_day_ok', () => {
+    // given / when
+    const card = createCard('board', '윤년 일정', '', { startDate: '2000-02-29', endDate: '2024-02-29' })
+    // then
+    expect(readCreatedCards('board')).toEqual([card])
+    expect(card.startDate).toBe('2000-02-29')
+    expect(card.endDate).toBe('2024-02-29')
+  })
+
+  it('created_card_rejects_reversed_dates_without_changing_saved_cards_ko', () => {
+    // given
+    const existing = createCard('board', '기존 카드')
+    // when / then
+    expect(() => createCard('board', '잘못된 기간', '본문', { startDate: '2026-10-15', endDate: '2026-10-14' })).toThrow('종료일은 시작일 이후로 지정해 주세요.')
+    expect(readCreatedCards('board')).toEqual([existing])
+  })
+
+  it.each([
+    { startDate: '2026-10-14', endDate: '2026-10-14' },
+    { startDate: '2026-10-14' },
+    { endDate: '2026-10-15' },
+  ])('created_card_accepts_same_day_and_partial_dates_ok_%#', details => {
+    // given / when
+    const card = createCard('board', '기간 입력', '본문', { memberName: '', ...details })
+    // then
+    expect(card).toMatchObject({ title: '기간 입력', content: '본문', memberName: '', ...details })
+    expect(card.memberAvatarUrl).toBeUndefined()
+    expect(readCreatedCards('board')).toEqual([card])
+  })
+
   it('created_cards_validate_data_and_allocate_unique_numbers_ok', () => {
     // given
     localStorage.setItem('work-manager:created-cards:board', JSON.stringify([null, {}, { ...CARD, boardId: 'other' }, { ...CARD, cardNumber: -1 }]))
     // when
-    const first = createCard('board', 'DONE', ' 작업 ')
-    const second = createCard('board', 'NOT_STARTED', '두 번째')
+    const first = createCard('board', ' 작업 ')
+    const second = createCard('board', '두 번째')
     // then
     expect(first.title).toBe('작업')
+    expect(first.status).toBe('NOT_STARTED')
+    expect(second.status).toBe('NOT_STARTED')
     expect(second.cardNumber).toBe(first.cardNumber + 1)
     expect(second.id).not.toBe(first.id)
     expect(readCreatedCards('board')).toEqual([first, second])
-    expect(() => createCard('board', 'DONE', ' ')).toThrow('제목을 입력해 주세요.')
+    expect(() => createCard('board', ' ')).toThrow('제목을 입력해 주세요.')
     localStorage.setItem('work-manager:created-cards:board', '{}')
     expect(readCreatedCards('board')).toEqual([])
   })
