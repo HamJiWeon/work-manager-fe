@@ -571,3 +571,6 @@ main:has(>div:not([hidden]) .card-create-page) > .list-switcher { display:none; 
 @media(max-width:600px) { .card-create-dialog .card-detail-panel dl { grid-template-columns:minmax(0,1fr); } }
 
 .card-create-dialog :is(input,textarea,select):focus-visible { outline-offset:-2px; }
+
+.card-create-date-field { min-width:0; }
+.card-date-reset { margin-top:6px; padding:4px 0; color:#496376; font-size:12px; text-decoration:underline; text-underline-offset:3px; }

@@ -127,6 +127,57 @@ describe('card_create', () => {
     expect(within(card).getByLabelText('작업 기간')).toHaveTextContent('시작일 미지정~종료일 미지정')
   })
 
+  it.each(['시작일', '종료일'])('reset_rejected_empty_date_and_save_unspecified_ok_%s', async label => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="reset-empty-date" />)
+    await user.click(screen.getByRole('button', { name: '시작 전 카드 추가' }))
+    await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), '날짜 초기화')
+    await user.type(screen.getByLabelText(label), '202020-02-20')
+    // when
+    await user.click(screen.getByLabelText(label))
+    await user.keyboard('{Backspace}{Delete}')
+    // then
+    expect(screen.getByLabelText(label)).toHaveValue('')
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: `${label} 초기화` }))
+    // then
+    expect(screen.getByLabelText(label)).toHaveFocus()
+    expect(screen.getByLabelText(label)).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: `${label} 초기화` })).not.toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: '추가' }))
+    // then
+    const card = await screen.findByRole('button', { name: '날짜 초기화 카드 열기' })
+    expect(within(card).getByLabelText('작업 기간')).toHaveTextContent('시작일 미지정~종료일 미지정')
+  })
+
+  it('reset_one_rejected_date_preserves_other_rejection_across_views_ok', async () => {
+    // given
+    const user = userEvent.setup()
+    render(<CardPage boardId="reset-both-dates" />)
+    await user.click(screen.getByRole('button', { name: '시작 전 카드 추가' }))
+    await user.type(screen.getByRole('textbox', { name: '시작 전 새 카드 제목' }), '두 날짜 초기화')
+    await user.type(screen.getByLabelText('시작일'), '202020-02-20')
+    await user.type(screen.getByLabelText('종료일'), '202020-02-20')
+    await user.click(screen.getByRole('button', { name: '카드 추가 창 확대' }))
+    // when
+    await user.click(screen.getByRole('button', { name: '시작일 초기화' }))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    // then
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByLabelText('시작일')).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByLabelText('종료일')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.queryByRole('button', { name: '시작일 초기화' })).not.toBeInTheDocument()
+    // when
+    await user.click(screen.getByRole('button', { name: '종료일 초기화' }))
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    // then
+    expect(await screen.findByRole('button', { name: '두 날짜 초기화 카드 열기' })).toBeInTheDocument()
+  })
+
   it('expand_collapse_preserves_draft_and_saves_markdown_ok', async () => {
     // given
     const user = userEvent.setup()
