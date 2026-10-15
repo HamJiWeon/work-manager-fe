@@ -58,18 +58,18 @@ describe('authentication_flow', () => {
     // when
     render(<OAuthCallback />)
     // then
-    expect(await screen.findByRole('alert')).toHaveTextContent('소셜 로그인을 다시 진행')
-    expect(mocks.replace).not.toHaveBeenCalled()
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/login?error=oauth'))
+    expect(mocks.replace).not.toHaveBeenCalledWith('/workspace')
   })
 
-  it('unknown_callback_status_shows_error_without_navigation_ko', async () => {
+  it('unknown_callback_status_goes_to_login_ko', async () => {
     // given
     window.history.replaceState({}, '', '/oauth/callback?status=UNKNOWN')
     // when
     render(<OAuthCallback />)
     // then
-    expect(await screen.findByRole('alert')).toHaveTextContent('소셜 로그인을 다시 진행')
-    expect(mocks.replace).not.toHaveBeenCalled()
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/login?error=oauth'))
+    expect(mocks.replace).not.toHaveBeenCalledWith('/workspace')
     expect(mocks.pending).not.toHaveBeenCalled()
     expect(mocks.restore).not.toHaveBeenCalled()
   })
@@ -94,14 +94,29 @@ describe('authentication_flow', () => {
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
   })
 
-  it('cancelled_or_expired_login_shows_error_ko', async () => {
+  it('cancelled_or_expired_login_goes_to_login_ko', async () => {
     // given
     mocks.pending.mockRejectedValue(new AuthError(401))
     // when
     render(<OAuthCallback />)
     // then
-    expect(await screen.findByRole('alert')).toHaveTextContent('소셜 로그인을 다시 진행')
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/login?error=oauth'))
+    expect(mocks.replace).not.toHaveBeenCalledWith('/workspace')
+  })
+
+  it.each([new Error('network'), new AuthError(500)])('callback_transient_error_can_be_retried_ok_%#', async cause => {
+    // given
+    const actor = userEvent.setup()
+    window.history.replaceState({}, '', '/oauth/callback?status=LOGIN_COMPLETE')
+    mocks.restore.mockRejectedValueOnce(cause).mockResolvedValueOnce(user)
+    render(<OAuthCallback />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('잠시 후 다시 시도')
     expect(mocks.replace).not.toHaveBeenCalled()
+    // when
+    await actor.click(screen.getByRole('button', { name: '다시 시도' }))
+    // then
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
+    expect(mocks.replace).not.toHaveBeenCalledWith('/login?error=oauth')
   })
 
   it('workspace_is_hidden_until_session_is_verified_ok', async () => {

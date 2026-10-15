@@ -7,8 +7,9 @@ import { AuthStatus } from './auth-status'
 
 const SIGNUP_REQUIRED = 'SIGNUP_REQUIRED'
 const LOGIN_COMPLETE = 'LOGIN_COMPLETE'
+const LOGIN_ERROR_PATH = '/login?error=oauth'
 
-/** 소셜 인증 후 신규 사용자는 가입 화면으로, 인증된 기존 사용자는 메인으로 이동한다. */
+/** 소셜 인증 후 신규 사용자는 가입 화면으로, 인증된 기존 사용자는 메인으로 이동하며 인증 실패 시 로그인으로 돌려보낸다. */
 export function OAuthCallback() {
   const router = useRouter()
   const [error, setError] = useState('')
@@ -30,7 +31,7 @@ export function OAuthCallback() {
       } catch (cause) {
         if (!active) return
         if (cause instanceof AuthError && cause.status === 401) {
-          setError('인증이 만료되었거나 취소되었습니다. 소셜 로그인을 다시 진행해 주세요.')
+          router.replace(LOGIN_ERROR_PATH)
         } else {
           setError('로그인 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
         }
