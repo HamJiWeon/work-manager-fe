@@ -68,6 +68,30 @@ describe('auth_client', () => {
     expect(fetchMock.mock.calls[4][0]).toBe('/backend/auth/logout')
   })
 
+  it('late_refresh_after_logout_does_not_restore_session_ko', async () => {
+    // given
+    let resolveRefresh!: (response: Response) => void
+    const delayedRefresh = new Promise<Response>(resolve => { resolveRefresh = resolve })
+    const { restoreSession, logout } = await import('@/lib/auth')
+    fetchMock.mockImplementation((url: string) => {
+      if (url.endsWith('/csrf')) return Promise.resolve(json(csrf))
+      if (url.endsWith('/refresh')) return delayedRefresh
+      if (url.endsWith('/logout')) return Promise.resolve(new Response(null, { status: 204 }))
+      return Promise.resolve(json(user))
+    })
+    const restoration = restoreSession()
+    const rejectedRestoration = expect(restoration).rejects.toMatchObject({ status: 401 })
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/backend/auth/refresh', expect.anything()))
+    // when
+    await logout()
+    resolveRefresh(json({ accessToken: 'stale-access' }))
+    // then
+    await rejectedRestoration
+    fetchMock.mockImplementation((url: string) => Promise.resolve(url.endsWith('/csrf') ? json(csrf) : json({}, 401)))
+    await expect(restoreSession()).rejects.toMatchObject({ status: 401 })
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/users/me'))).toBe(false)
+  })
+
   it('registration_posts_versioned_consents_ok', async () => {
     // given
     fetchMock.mockResolvedValueOnce(json(csrf)).mockResolvedValueOnce(new Response(null, { status: 204 }))

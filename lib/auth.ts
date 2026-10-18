@@ -28,6 +28,8 @@ export interface Consent {
 const API_PREFIX = '/backend'
 let accessToken: string | null = null
 let refreshRequest: Promise<void> | null = null
+let sessionVersion = 0
+let pendingLogouts = 0
 
 /** HTTP 상태를 구분하되 서버 응답의 인증 정보는 오류 메시지에 포함하지 않는다. */
 export class AuthError extends Error {
@@ -55,24 +57,29 @@ async function csrfPost(path: string, body?: unknown): Promise<Response> {
 }
 
 async function refresh(): Promise<void> {
+  if (pendingLogouts > 0) throw new AuthError(401)
   if (!refreshRequest) {
+    const version = sessionVersion
     refreshRequest = (async () => {
       const response = await csrfPost('/auth/refresh')
       const data: { accessToken: string } = await response.json()
+      if (version !== sessionVersion || pendingLogouts > 0) throw new AuthError(401)
       if (!data.accessToken) throw new AuthError(401)
       accessToken = data.accessToken
     })().catch(error => {
-      accessToken = null
+      if (version === sessionVersion) accessToken = null
       throw error
     }).finally(() => { refreshRequest = null })
   }
   return refreshRequest
 }
 
-/** 메모리의 액세스 토큰을 사용하며 401 발생 시 한 번 갱신해 재요청한다. */
+/** 메모리 토큰을 사용하고 401이면 한 번 갱신한다. 로그아웃 이전 요청은 재시도하지 않는다. */
 export async function authenticatedRequest(path: string, init: RequestInit = {}): Promise<Response> {
+  const version = sessionVersion
   if (!accessToken) await refresh()
   const send = () => {
+    if (version !== sessionVersion || pendingLogouts > 0) throw new AuthError(401)
     const headers = new Headers(init.headers)
     headers.set('Authorization', `Bearer ${accessToken}`)
     return request(path, { ...init, headers })
@@ -80,6 +87,7 @@ export async function authenticatedRequest(path: string, init: RequestInit = {})
   try {
     return await send()
   } catch (error) {
+    if (version !== sessionVersion || pendingLogouts > 0) throw new AuthError(401)
     if (!(error instanceof AuthError) || error.status !== 401) throw error
     await refresh()
     return send()
@@ -116,8 +124,14 @@ export async function completeRegistration(consents: Consent[]): Promise<void> {
   await csrfPost('/auth/registration', { consents })
 }
 
-/** 백엔드에서 갱신 토큰을 폐기한 후 메모리의 액세스 토큰을 제거한다. */
+/** 이전 인증 요청을 무효화하고 갱신을 차단한 상태에서 백엔드 갱신 토큰을 폐기한다. */
 export async function logout(): Promise<void> {
-  await csrfPost('/auth/logout')
+  sessionVersion += 1
+  pendingLogouts += 1
   accessToken = null
+  try {
+    await csrfPost('/auth/logout')
+  } finally {
+    pendingLogouts -= 1
+  }
 }
