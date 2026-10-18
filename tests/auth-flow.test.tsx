@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthError } from '@/lib/auth'
@@ -211,6 +211,126 @@ describe('authentication_flow', () => {
     // then
     expect(await screen.findByRole('alert')).toHaveTextContent('가입 요청을 완료하지 못했습니다')
     expect(screen.getByRole('checkbox', { name: '[필수] 이용약관' })).toBeChecked()
+    expect(mocks.replace).not.toHaveBeenCalled()
+  })
+})
+
+describe('authentication_error_and_retry', () => {
+  it.each([new AuthError(401), new Error('network')])('registration_load_error_can_be_retried_ok_%#', async cause => {
+    // given
+    const actor = userEvent.setup()
+    mocks.pending.mockRejectedValueOnce(cause).mockResolvedValueOnce({ ...registration, provider: 'GITHUB' })
+    render(<RegistrationPage />)
+    // when
+    expect(await screen.findByRole('alert')).toHaveTextContent(cause instanceof AuthError ? '가입 시간이 만료' : '가입 안내를 불러오지 못했습니다')
+    await actor.click(screen.getByRole('button', { name: '다시 시도' }))
+    // then
+    expect(await screen.findByRole('checkbox', { name: '[필수] 이용약관' })).toBeInTheDocument()
+    expect(screen.getByText(/GitHub 계정으로 시작합니다/)).toBeInTheDocument()
+  })
+
+  it('expired_registration_submission_preserves_consents_ko', async () => {
+    // given
+    const actor = userEvent.setup()
+    mocks.pending.mockResolvedValue(registration)
+    mocks.complete.mockRejectedValue(new AuthError(401))
+    render(<RegistrationPage />)
+    await actor.click(await screen.findByRole('checkbox', { name: '[필수] 이용약관' }))
+    await actor.click(screen.getByRole('checkbox', { name: '[필수] 개인정보 수집·이용' }))
+    // when
+    await actor.click(screen.getByRole('button', { name: '동의하고 가입하기' }))
+    // then
+    expect(await screen.findByRole('alert')).toHaveTextContent('가입 시간이 만료')
+    expect(screen.getByRole('button', { name: '동의하고 가입하기' })).toBeEnabled()
+    expect(mocks.restore).not.toHaveBeenCalled()
+  })
+
+  it('registration_session_failure_goes_to_callback_without_resubmitting_ok', async () => {
+    // given
+    const actor = userEvent.setup()
+    mocks.pending.mockResolvedValue(registration)
+    mocks.complete.mockResolvedValue(undefined)
+    mocks.restore.mockRejectedValue(new Error('network'))
+    render(<RegistrationPage />)
+    await actor.click(await screen.findByRole('checkbox', { name: '[필수] 이용약관' }))
+    await actor.click(screen.getByRole('checkbox', { name: '[필수] 개인정보 수집·이용' }))
+    await actor.click(screen.getByRole('checkbox', { name: '[선택] 소식 수신' }))
+    // when
+    await actor.click(screen.getByRole('button', { name: '동의하고 가입하기' }))
+    // then
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/oauth/callback'))
+    expect(mocks.complete).toHaveBeenCalledTimes(1)
+    expect(mocks.complete).toHaveBeenCalledWith(expect.arrayContaining([{ id: 'news', version: 'v1', agreed: true }]))
+  })
+
+  it('pending_registration_submission_disables_controls_ok', async () => {
+    // given
+    const actor = userEvent.setup()
+    let resolveSubmission!: () => void
+    mocks.pending.mockResolvedValue(registration)
+    mocks.complete.mockReturnValue(new Promise<void>(resolve => { resolveSubmission = resolve }))
+    mocks.restore.mockResolvedValue(user)
+    render(<RegistrationPage />)
+    await actor.click(await screen.findByRole('checkbox', { name: '[필수] 이용약관' }))
+    await actor.click(screen.getByRole('checkbox', { name: '[필수] 개인정보 수집·이용' }))
+    // when
+    await actor.click(screen.getByRole('button', { name: '동의하고 가입하기' }))
+    // then
+    expect(screen.getByRole('button', { name: '가입 처리 중…' })).toBeDisabled()
+    expect(screen.getByRole('checkbox', { name: '[선택] 소식 수신' })).toBeDisabled()
+    resolveSubmission()
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
+  })
+
+  it('failed_logout_can_be_retried_before_navigation_ok', async () => {
+    // given
+    const actor = userEvent.setup()
+    mocks.restore.mockResolvedValue(user)
+    mocks.logout.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce(undefined)
+    render(<AuthenticatedWorkspace today="2026-10-15" />)
+    // when
+    await actor.click(await screen.findByRole('button', { name: '로그아웃' }))
+    // then
+    expect(await screen.findByRole('alert')).toHaveTextContent('로그아웃하지 못했습니다')
+    expect(mocks.replace).not.toHaveBeenCalled()
+    await actor.click(screen.getByRole('button', { name: '다시 시도' }))
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/login'))
+    expect(mocks.logout).toHaveBeenCalledTimes(2)
+  })
+})
+
+
+describe('unmounted_authentication_requests', () => {
+  it.each(['callback_pending', 'callback_session', 'workspace', 'registration'] as const)('late_success_does_not_navigate_after_unmount_ok_%s', async target => {
+    // given
+    let resolveRequest!: (value: unknown) => void
+    const delayed = new Promise(resolve => { resolveRequest = resolve })
+    if (target === 'callback_session') {
+      window.history.replaceState({}, '', '/oauth/callback?status=LOGIN_COMPLETE')
+      mocks.restore.mockReturnValue(delayed)
+    } else if (target === 'workspace') mocks.restore.mockReturnValue(delayed)
+    else mocks.pending.mockReturnValue(delayed)
+    const view = target === 'workspace' ? <AuthenticatedWorkspace today="2026-10-15" /> : target === 'registration' ? <RegistrationPage /> : <OAuthCallback />
+    const { unmount } = render(view)
+    // when
+    unmount()
+    await act(async () => { resolveRequest((target === 'callback_pending' || target === 'registration' ? registration : user)) })
+    // then
+    expect(mocks.replace).not.toHaveBeenCalled()
+  })
+
+  it.each(['callback', 'workspace', 'registration'] as const)('late_error_does_not_navigate_after_unmount_ok_%s', async target => {
+    // given
+    let rejectRequest!: (reason: Error) => void
+    const delayed = new Promise((_, reject) => { rejectRequest = reject })
+    if (target === 'workspace') mocks.restore.mockReturnValue(delayed)
+    else mocks.pending.mockReturnValue(delayed)
+    const view = target === 'workspace' ? <AuthenticatedWorkspace today="2026-10-15" /> : target === 'registration' ? <RegistrationPage /> : <OAuthCallback />
+    const { unmount } = render(view)
+    // when
+    unmount()
+    await act(async () => { rejectRequest(new AuthError(401)) })
+    // then
     expect(mocks.replace).not.toHaveBeenCalled()
   })
 })

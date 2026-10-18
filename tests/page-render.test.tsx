@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import HomePage from '@/app/page'
+import LoginRoute from '@/app/login/page'
+import SignupRoute from '@/app/signup/page'
 import OAuthCallbackPage from '@/app/oauth/callback/page'
 import Page from '@/app/workspace/page'
 import RootLayout from '@/app/layout'
@@ -18,6 +20,24 @@ describe('server_render', () => {
   it('oauth_callback_checks_authentication_before_navigation_ok', () => {
     // when / then
     expect(renderToStaticMarkup(<OAuthCallbackPage />)).toContain('로그인 확인 중')
+  })
+
+  it.each([undefined, 'oauth', ''])('login_route_renders_search_error_guidance_ok_%#', async error => {
+    // given
+    const searchParams = Promise.resolve(error === undefined ? {} : { error })
+    // when
+    const html = renderToStaticMarkup(await LoginRoute({ searchParams }))
+    // then
+    expect(html).toContain('/backend/oauth2/authorization/google')
+    expect(html.includes('소셜 인증을 완료하지 못했습니다')).toBe(error !== undefined)
+  })
+
+  it('signup_route_renders_registration_loading_state_ok', () => {
+    // given / when
+    const html = renderToStaticMarkup(<SignupRoute />)
+    // then
+    expect(html).toContain('로그인 확인 중')
+    expect(html).not.toContain('동의하고 가입하기')
   })
 
   it('home_redirects_to_login_ok', () => {

@@ -143,3 +143,75 @@ describe('auth_client', () => {
     await expect(getPendingRegistration()).rejects.toMatchObject({ status: 502 })
   })
 })
+
+describe('auth_response_validation', () => {
+  it.each([{ id: '', name: '사용자' }, { id: 'user-1', name: '' }])('invalid_user_response_is_rejected_ko_%#', async invalidUser => {
+    // given
+    fetchMock.mockResolvedValueOnce(json(csrf)).mockResolvedValueOnce(json({ accessToken: 'access' })).mockResolvedValueOnce(json(invalidUser))
+    const { restoreSession } = await import('@/lib/auth')
+    // when / then
+    await expect(restoreSession()).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('missing_access_token_is_rejected_ko', async () => {
+    // given
+    fetchMock.mockResolvedValueOnce(json(csrf)).mockResolvedValueOnce(json({}))
+    const { restoreSession } = await import('@/lib/auth')
+    // when / then
+    await expect(restoreSession()).rejects.toMatchObject({ status: 401 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('non_authentication_error_is_not_retried_ko', async () => {
+    // given
+    fetchMock.mockResolvedValueOnce(json(csrf)).mockResolvedValueOnce(json({ accessToken: 'access' })).mockResolvedValueOnce(json({}, 503))
+    const { restoreSession } = await import('@/lib/auth')
+    // when / then
+    await expect(restoreSession()).rejects.toMatchObject({ status: 503 })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('second_unauthorized_response_is_not_retried_ko', async () => {
+    // given
+    fetchMock.mockResolvedValueOnce(json(csrf)).mockResolvedValueOnce(json({ accessToken: 'old' }))
+      .mockResolvedValueOnce(json({}, 401)).mockResolvedValueOnce(json(csrf))
+      .mockResolvedValueOnce(json({ accessToken: 'new' })).mockResolvedValueOnce(json({}, 401))
+    const { restoreSession } = await import('@/lib/auth')
+    // when / then
+    await expect(restoreSession()).rejects.toMatchObject({ status: 401 })
+    expect(fetchMock).toHaveBeenCalledTimes(6)
+  })
+
+  it('existing_user_registration_returns_null_ok', async () => {
+    // given
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
+    const { getPendingRegistration } = await import('@/lib/auth')
+    // when / then
+    await expect(getPendingRegistration()).resolves.toBeNull()
+  })
+
+  it('registration_server_error_is_propagated_ko', async () => {
+    // given
+    fetchMock.mockResolvedValue(json({}, 500))
+    const { getPendingRegistration } = await import('@/lib/auth')
+    // when / then
+    await expect(getPendingRegistration()).rejects.toMatchObject({ status: 500 })
+  })
+
+  it.each([{}, { terms: [{ required: false }] }])('registration_without_required_terms_is_rejected_ko_%#', async data => {
+    // given
+    fetchMock.mockResolvedValue(json(data))
+    const { getPendingRegistration } = await import('@/lib/auth')
+    // when / then
+    await expect(getPendingRegistration()).rejects.toMatchObject({ status: 502 })
+  })
+
+  it('valid_pending_registration_is_returned_ok', async () => {
+    // given
+    const registration = { name: '사용자', provider: 'GOOGLE', terms: [{ id: 'terms', title: '이용약관', version: 'v1', content: '약관', required: true }] }
+    fetchMock.mockResolvedValue(json(registration))
+    const { getPendingRegistration } = await import('@/lib/auth')
+    // when / then
+    await expect(getPendingRegistration()).resolves.toEqual(registration)
+  })
+})
