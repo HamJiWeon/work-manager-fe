@@ -45,6 +45,30 @@ describe('auth_client', () => {
     expect((fetchMock.mock.calls[5][1].headers as Headers).get('Authorization')).toBe('Bearer new')
   })
 
+  it('late_unauthorized_response_reuses_refreshed_token_ok', async () => {
+    // given
+    const { restoreSession } = await import('@/lib/auth')
+    fetchMock.mockResolvedValueOnce(json(csrf)).mockResolvedValueOnce(json({ accessToken: 'old' })).mockResolvedValueOnce(json(user))
+    await restoreSession()
+    fetchMock.mockClear()
+    fetchMock.mockImplementation((url: string) => Promise.resolve(json(url.endsWith('/csrf') ? csrf : url.endsWith('/refresh') ? { accessToken: 'redundant' } : user)))
+    let resolveDelayed!: (response: Response) => void
+    const delayedResponse = new Promise<Response>(resolve => { resolveDelayed = resolve })
+    fetchMock.mockResolvedValueOnce(json({}, 401)).mockReturnValueOnce(delayedResponse)
+      .mockResolvedValueOnce(json(csrf)).mockResolvedValueOnce(json({ accessToken: 'new' }))
+      .mockResolvedValueOnce(json(user)).mockResolvedValueOnce(json(user))
+    // when
+    const first = restoreSession()
+    const second = restoreSession()
+    await expect(first).resolves.toEqual(user)
+    resolveDelayed(json({}, 401))
+    // then
+    await expect(second).resolves.toEqual(user)
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/refresh'))).toHaveLength(1)
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/csrf'))).toHaveLength(1)
+    expect((fetchMock.mock.calls.at(-1)![1].headers as Headers).get('Authorization')).toBe('Bearer new')
+  })
+
   it('missing_refresh_cookie_does_not_authenticate_ko', async () => {
     // given
     fetchMock.mockResolvedValueOnce(json(csrf)).mockResolvedValueOnce(json({}, 401))

@@ -74,7 +74,7 @@ async function refresh(): Promise<void> {
   return refreshRequest
 }
 
-/** 메모리 토큰을 사용하고 401이면 한 번 갱신한다. 로그아웃 이전 요청은 재시도하지 않는다. */
+/** 401이면 이미 갱신된 토큰을 재사용하거나 한 번 갱신한다. 로그아웃 이전 요청은 재시도하지 않는다. */
 export async function authenticatedRequest(path: string, init: RequestInit = {}): Promise<Response> {
   const version = sessionVersion
   if (!accessToken) await refresh()
@@ -84,12 +84,13 @@ export async function authenticatedRequest(path: string, init: RequestInit = {})
     headers.set('Authorization', `Bearer ${accessToken}`)
     return request(path, { ...init, headers })
   }
+  const requestToken = accessToken
   try {
     return await send()
   } catch (error) {
     if (version !== sessionVersion || pendingLogouts > 0) throw new AuthError(401)
     if (!(error instanceof AuthError) || error.status !== 401) throw error
-    await refresh()
+    if (!accessToken || accessToken === requestToken) await refresh()
     return send()
   }
 }
