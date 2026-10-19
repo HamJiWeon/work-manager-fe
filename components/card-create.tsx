@@ -1,5 +1,6 @@
 "use client"
 
+import { useStorageUserId } from '@/components/storage-user'
 import { useId, useLayoutEffect, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { Dialog } from '@base-ui/react/dialog'
@@ -13,6 +14,7 @@ type CardCreateError = { type: 'title' | 'period' | 'form'; message: string }
 
 /** 시작 전 카드 생성 창과 상세 페이지 형태의 확대 편집기를 제공하고 제목과 Markdown 내용을 저장한다. 저장 실패 시 초안을 유지한다. */
 export function CardCreate({ boardId, expansionContainer }: { boardId: string; expansionContainer: RefObject<HTMLDivElement | null> }) {
+  const storageUserId = useStorageUserId()
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [expanded, setExpanded] = useState(false)
@@ -36,7 +38,7 @@ export function CardCreate({ boardId, expansionContainer }: { boardId: string; e
     if (hasRejectedDate) return
     if (!title.trim()) { setError({ type: 'title', message: '제목을 입력해 주세요.' }); return }
     if (startDate && endDate && startDate > endDate) { setError({ type: 'period', message: '종료일은 시작일 이후로 지정해 주세요.' }); return }
-    try { createCard(boardId, title, content, { memberName, startDate, endDate }); setOpen(false); setExpanded(false) }
+    try { createCard(boardId, title, content, { memberName, startDate, endDate }, storageUserId); setOpen(false); setExpanded(false) }
     catch { setError({ type: 'form', message: '카드를 저장하지 못했습니다. 다시 시도해 주세요.' }) }
   }
   const { draft, textarea, handleFormat, handleChange, handleKeyDown, handleSelectionChange, handleReset } = useMarkdownEditor('', handleSave)

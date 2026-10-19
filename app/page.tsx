@@ -1,9 +1,6 @@
-import { MainPage } from '@/components/main-page'
-import { getToday } from '@/lib/activity'
+import { OAuthCallback } from '@/components/oauth-callback'
 
-export const dynamic = 'force-dynamic'
-
-/** 요청 시점의 서울 날짜를 기준으로 작업 현황을 표시한다. */
+/** 기본 주소에서도 OAuth 상태와 인증을 확인해 가입 또는 워크스페이스로 이동한다. */
 export default function Page() {
-  return <MainPage today={getToday()} />
+  return <OAuthCallback />
 }

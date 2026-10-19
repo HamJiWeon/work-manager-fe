@@ -517,3 +517,22 @@ describe('workspace', () => {
   })
 
 })
+
+describe('workspace_profile', () => {
+  it('profile_and_logout_pending_state_are_visible_ok', async () => {
+    // given
+    const actor = userEvent.setup()
+    const onLogout = vi.fn()
+    const props = { today: TODAY, user: { id: 'user-1', name: '홍길동', email: 'user@example.com', profileImgUrl: null }, onLogout }
+    const { rerender } = render(<MainPage {...props} />)
+    const sidebar = within(screen.getByRole('complementary', { name: '워크스페이스 탐색' }))
+    expect(sidebar.getByText('홍길동')).toBeInTheDocument()
+    expect(sidebar.getByText('user@example.com')).toBeInTheDocument()
+    // when
+    await actor.click(sidebar.getByRole('button', { name: '로그아웃' }))
+    rerender(<MainPage {...props} loggingOut />)
+    // then
+    expect(onLogout).toHaveBeenCalledTimes(1)
+    expect(sidebar.getByRole('button', { name: '로그아웃 중…' })).toBeDisabled()
+  })
+})
