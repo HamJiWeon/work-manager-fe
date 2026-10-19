@@ -49,6 +49,45 @@ describe('authentication_flow', () => {
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
   })
 
+  it('oauth_error_keeps_login_guidance_without_restoring_existing_session_ok', async () => {
+    // given
+    mocks.restore.mockResolvedValue(user)
+    // when
+    render(<AuthenticatedLogin loginError={true} />)
+    // then
+    expect(screen.getByRole('alert')).toHaveTextContent('소셜 인증을 완료하지 못했습니다')
+    await act(async () => {})
+    expect(mocks.restore).not.toHaveBeenCalled()
+    expect(mocks.replace).not.toHaveBeenCalled()
+  })
+
+  it('oauth_error_cancels_navigation_from_pending_session_restore_ok', async () => {
+    // given
+    let resolveSession!: (value: typeof user) => void
+    mocks.restore.mockReturnValue(new Promise(resolve => { resolveSession = resolve }))
+    const view = render(<AuthenticatedLogin loginError={false} />)
+    expect(mocks.restore).toHaveBeenCalledTimes(1)
+    // when
+    view.rerender(<AuthenticatedLogin loginError={true} />)
+    await act(async () => { resolveSession(user) })
+    // then
+    expect(screen.getByRole('alert')).toHaveTextContent('소셜 인증을 완료하지 못했습니다')
+    expect(mocks.restore).toHaveBeenCalledTimes(1)
+    expect(mocks.replace).not.toHaveBeenCalled()
+  })
+
+  it('clearing_oauth_error_allows_session_restore_again_ok', async () => {
+    // given
+    mocks.restore.mockResolvedValue(user)
+    const view = render(<AuthenticatedLogin loginError={true} />)
+    expect(mocks.restore).not.toHaveBeenCalled()
+    // when
+    view.rerender(<AuthenticatedLogin loginError={false} />)
+    // then
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('login_keeps_social_login_available_when_session_is_missing_ok', async () => {
     // given
     mocks.restore.mockRejectedValue(new AuthError(401))
