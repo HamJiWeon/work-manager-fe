@@ -1,6 +1,6 @@
-import { redirect } from 'next/navigation'
+import { OAuthCallback } from '@/components/oauth-callback'
 
-/** 기본 주소로 접속하면 로그인 페이지로 이동한다. */
+/** 기본 주소에서도 OAuth 상태와 인증을 확인해 가입 또는 워크스페이스로 이동한다. */
 export default function Page() {
-  redirect('/login')
+  return <OAuthCallback />
 }

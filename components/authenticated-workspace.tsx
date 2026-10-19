@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AuthError, logout, restoreSession, type AuthUser } from '@/lib/auth'
+import { StorageUserContext } from './storage-user'
 import { MainPage } from './main-page'
 import { AuthStatus } from './auth-status'
 import styles from './auth-panel.module.css'
@@ -40,6 +41,6 @@ export function AuthenticatedWorkspace({ today }: { today: string }) {
   if (!user) return <AuthStatus error={error} onRetry={() => { setError(''); setAttempt(value => value + 1) }} />
   return <>
     {logoutError && <div role="alert" className={styles.notice}>{logoutError}<button type="button" disabled={loggingOut} onClick={handleLogout}>다시 시도</button></div>}
-    <MainPage today={today} user={user} onLogout={handleLogout} loggingOut={loggingOut} />
+    <StorageUserContext.Provider key={user.id} value={user.id}><MainPage today={today} user={user} onLogout={handleLogout} loggingOut={loggingOut} /></StorageUserContext.Provider>
   </>
 }

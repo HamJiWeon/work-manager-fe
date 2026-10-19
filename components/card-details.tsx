@@ -1,5 +1,6 @@
 "use client"
 
+import { useStorageUserId } from '@/components/storage-user'
 import { useState } from 'react'
 import { CalendarDays, Users } from 'lucide-react'
 import type { CardItem } from '@/lib/card'
@@ -12,6 +13,7 @@ type DetailField = 'memberName' | 'startDate' | 'endDate'
 
 /** 클릭한 항목만 편집하고 선택 즉시 저장한다. 잘못된 기간과 저장 실패는 기존 값을 유지하며 안내한다. */
 export function CardDetails({ card, onSave }: { card: CardItem; onSave?: (document: SavedCardDocument) => void }) {
+  const storageUserId = useStorageUserId()
   const documents = useCardDocuments(card.boardId)
   const saved = documents[card.id]
   const current = { memberName: saved?.memberName ?? card.memberName, startDate: saved?.startDate ?? card.startDate ?? '', endDate: saved?.endDate ?? card.endDate ?? '' }
@@ -22,8 +24,8 @@ export function CardDetails({ card, onSave }: { card: CardItem; onSave?: (docume
     const next = { ...current, [field]: value }
     if (next.startDate && next.endDate && next.startDate > next.endDate) { setError('종료일은 시작일 이후로 지정해 주세요.'); return }
     try {
-      const document = { title: card.title, content: card.content, ...readCardDocument(card), [field]: value }
-      saveCardDocument(card, document)
+      const document = { title: card.title, content: card.content, ...readCardDocument(card, storageUserId), [field]: value }
+      saveCardDocument(card, document, storageUserId)
       onSave?.(document)
       setEditing(null)
       setError('')

@@ -9,7 +9,7 @@ const SIGNUP_REQUIRED = 'SIGNUP_REQUIRED'
 const LOGIN_COMPLETE = 'LOGIN_COMPLETE'
 const LOGIN_ERROR_PATH = '/login?error=oauth'
 
-/** 소셜 인증 후 신규 사용자는 가입 화면으로, 인증된 기존 사용자는 메인으로 이동하며 인증 실패 시 로그인으로 돌려보낸다. */
+/** 신규 가입은 가입 화면으로 안내하고, 가입 정보가 없다는 401은 로그인 인증을 복원해 기존 회원 여부를 확인한다. */
 export function OAuthCallback() {
   const router = useRouter()
   const [error, setError] = useState('')
@@ -22,9 +22,14 @@ export function OAuthCallback() {
         if (status === SIGNUP_REQUIRED) { router.replace('/signup'); return }
         if (status !== null && status !== LOGIN_COMPLETE) throw new AuthError(401)
         if (status === null) {
-          const pending = await getPendingRegistration()
+          try {
+            const pending = await getPendingRegistration()
+            if (!active) return
+            if (pending) { router.replace('/signup'); return }
+          } catch (cause) {
+            if (!(cause instanceof AuthError) || cause.status !== 401) throw cause
+          }
           if (!active) return
-          if (pending) { router.replace('/signup'); return }
         }
         await restoreSession()
         if (active) router.replace('/workspace')

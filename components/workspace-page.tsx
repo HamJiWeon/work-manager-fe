@@ -1,5 +1,6 @@
 "use client"
 
+import { useStorageUserId } from '@/components/storage-user'
 import { useSyncExternalStore } from 'react'
 import { ChevronRight, FileText, List } from 'lucide-react'
 import { MarkdownDocument } from '@/components/markdown-document'
@@ -35,10 +36,11 @@ interface WorkspacePageProps {
 
 /** 프로젝트별 공통 문서 목록과 카드와 동일한 Markdown 편집·미리보기를 제공한다. */
 export function WorkspacePage({ projectId, document, onOpenDocument, onBack, onSave }: WorkspacePageProps) {
-  const snapshot = useSyncExternalStore(subscribe, () => JSON.stringify(COMMON_DOCUMENTS.map(item => readWorkspaceDocument(projectId, item.name))), () => JSON.stringify(COMMON_DOCUMENTS.map(() => null)))
+  const storageUserId = useStorageUserId()
+  const snapshot = useSyncExternalStore(subscribe, () => JSON.stringify(COMMON_DOCUMENTS.map(item => readWorkspaceDocument(projectId, item.name, storageUserId))), () => JSON.stringify(COMMON_DOCUMENTS.map(() => null)))
   const savedDocuments = JSON.parse(snapshot) as (SavedCardDocument | null)[]
   if (document) {
-    return <MarkdownDocument key={`${projectId}:${document}`} initialDocument={{ title: document.replace(/\.md$/i, ''), content: '' }} readDocument={() => readWorkspaceDocument(projectId, document)} saveDocument={value => saveWorkspaceDocument(projectId, document, value)} onSave={onSave} hideBackButton onClose={onBack} backLabel="공통 문서 목록" titleLabel="문서 제목" />
+    return <MarkdownDocument key={`${projectId}:${document}`} initialDocument={{ title: document.replace(/\.md$/i, ''), content: '' }} readDocument={() => readWorkspaceDocument(projectId, document, storageUserId)} saveDocument={value => saveWorkspaceDocument(projectId, document, value, storageUserId)} onSave={onSave} hideBackButton onClose={onBack} backLabel="공통 문서 목록" titleLabel="문서 제목" />
   }
 
   return <>

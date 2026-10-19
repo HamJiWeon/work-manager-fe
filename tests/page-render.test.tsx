@@ -40,14 +40,9 @@ describe('server_render', () => {
     expect(html).not.toContain('동의하고 가입하기')
   })
 
-  it('home_redirects_to_login_ok', () => {
+  it('home_checks_authentication_before_navigation_ok', () => {
     // when / then
-    expect(() => HomePage()).toThrow('NEXT_REDIRECT')
-    try {
-      HomePage()
-    } catch (error) {
-      expect(error).toHaveProperty('digest', 'NEXT_REDIRECT;replace;/login;307;')
-    }
+    expect(renderToStaticMarkup(<HomePage />)).toContain('로그인 확인 중')
   })
 
   it('page_uses_seoul_date_and_default_activity_ok', () => {

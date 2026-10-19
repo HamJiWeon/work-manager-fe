@@ -1,8 +1,8 @@
+import { PREVIEW_STORAGE_USER, userStoragePrefix } from '@/lib/user-storage'
 import { CARD_DATE_RANGE_ERROR, isCardDateInRange } from '@/lib/card-date'
 import { CARD_STATUSES, getMemberAvatarUrl, type CardItem, type CardStatus } from '@/lib/card'
 
 export const CREATED_CARDS_CHANGE_EVENT = 'work-manager:created-cards-change'
-const STORAGE_PREFIX = 'work-manager:created-cards:'
 const SAMPLE_CARD_TOTAL = 72
 
 function isCard(value: unknown): value is CardItem {
@@ -14,17 +14,17 @@ function isCard(value: unknown): value is CardItem {
     && (card.endDate === undefined || typeof card.endDate === 'string')
 }
 
-/** 보드에서 직접 추가한 카드를 복원한다. 손상된 데이터와 다른 보드의 항목은 제외한다. */
-export function readCreatedCards(boardId: string): CardItem[] {
+/** 사용자별 보드에서 직접 추가한 카드를 복원한다. 손상된 데이터와 다른 보드의 항목은 제외한다. */
+export function readCreatedCards(boardId: string, userId = PREVIEW_STORAGE_USER): CardItem[] {
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}${boardId}`) ?? '[]')
+    const value: unknown = JSON.parse(localStorage.getItem(`${userStoragePrefix(userId, 'created-cards')}${boardId}`) ?? '[]')
     return Array.isArray(value) ? value.filter(isCard).filter(card => card.boardId === boardId) : []
   } catch { return [] }
 }
 
-/** 예시 카드 번호 다음의 고유 번호로 제목과 내용을 담은 시작 전 카드를 저장한다. 저장 실패는 UI가 초안을 유지하도록 전달한다. */
-export function createCard(boardId: string, title: string, content = '', details: Partial<Pick<CardItem, 'memberName' | 'startDate' | 'endDate'>> = {}): CardItem {
-  const cards = readCreatedCards(boardId)
+/** 사용자별 예시 카드 번호 다음의 고유 번호로 제목과 내용을 담은 시작 전 카드를 저장한다. 저장 실패는 UI가 초안을 유지하도록 전달한다. */
+export function createCard(boardId: string, title: string, content = '', details: Partial<Pick<CardItem, 'memberName' | 'startDate' | 'endDate'>> = {}, userId = PREVIEW_STORAGE_USER): CardItem {
+  const cards = readCreatedCards(boardId, userId)
   const card: CardItem = {
     id: crypto.randomUUID(), boardId, status: 'NOT_STARTED', title: title.trim(), content,
     cardNumber: Math.max(SAMPLE_CARD_TOTAL, ...cards.map(item => item.cardNumber)) + 1,
@@ -34,7 +34,7 @@ export function createCard(boardId: string, title: string, content = '', details
   if (!card.title) throw new Error('제목을 입력해 주세요.')
   if (!isCardDateInRange(card.startDate ?? '') || !isCardDateInRange(card.endDate ?? '')) throw new Error(CARD_DATE_RANGE_ERROR)
   if (card.startDate && card.endDate && card.startDate > card.endDate) throw new Error('종료일은 시작일 이후로 지정해 주세요.')
-  localStorage.setItem(`${STORAGE_PREFIX}${boardId}`, JSON.stringify([...cards, card]))
+  localStorage.setItem(`${userStoragePrefix(userId, 'created-cards')}${boardId}`, JSON.stringify([...cards, card]))
   window.dispatchEvent(new Event(CREATED_CARDS_CHANGE_EVENT))
   return card
 }

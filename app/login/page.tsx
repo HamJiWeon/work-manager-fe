@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { LoginPage } from '@/components/login-page'
+import { AuthenticatedLogin } from '@/components/authenticated-login'
 
 export const metadata: Metadata = {
   title: '로그인 — Work Manager',
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 /** 워크스페이스의 로그인 화면을 제공한다. */
 export default async function Page({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams
-  return <LoginPage backendUrl="/backend" loginError={params.error !== undefined} />
+  return <AuthenticatedLogin loginError={params.error !== undefined} />
 }

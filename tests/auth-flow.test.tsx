@@ -2,6 +2,8 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthError } from '@/lib/auth'
+import HomePage from '@/app/page'
+import { AuthenticatedLogin } from '@/components/authenticated-login'
 import { OAuthCallback } from '@/components/oauth-callback'
 import { AuthenticatedWorkspace } from '@/components/authenticated-workspace'
 import { RegistrationPage } from '@/components/registration-page'
@@ -28,6 +30,36 @@ const registration = {
 beforeEach(() => { vi.resetAllMocks(); window.history.replaceState({}, '', '/oauth/callback') })
 
 describe('authentication_flow', () => {
+  it('home_restores_existing_session_before_workspace_navigation_ok', async () => {
+    // given
+    window.history.replaceState({}, '', '/?status=LOGIN_COMPLETE')
+    mocks.restore.mockResolvedValue(user)
+    // when
+    render(<HomePage />)
+    // then
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
+  })
+
+  it('login_restores_existing_session_ok', async () => {
+    // given
+    mocks.restore.mockResolvedValue(user)
+    // when
+    render(<AuthenticatedLogin loginError={false} />)
+    // then
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
+  })
+
+  it('login_keeps_social_login_available_when_session_is_missing_ok', async () => {
+    // given
+    mocks.restore.mockRejectedValue(new AuthError(401))
+    // when
+    render(<AuthenticatedLogin loginError={false} />)
+    // then
+    expect(await screen.findByRole('link', { name: 'Google로 계속하기' })).toBeInTheDocument()
+    await act(async () => {})
+    expect(mocks.replace).not.toHaveBeenCalled()
+  })
+
   it('signup_required_status_goes_to_signup_without_session_requests_ok', async () => {
     // given
     window.history.replaceState({}, '', '/oauth/callback?status=SIGNUP_REQUIRED')
@@ -94,9 +126,47 @@ describe('authentication_flow', () => {
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
   })
 
+  it('missing_pending_cookie_restores_existing_member_session_ok', async () => {
+    // given
+    mocks.pending.mockRejectedValue(new AuthError(401))
+    mocks.restore.mockResolvedValue(user)
+    // when
+    render(<OAuthCallback />)
+    // then
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
+    expect(mocks.restore).toHaveBeenCalledTimes(1)
+    expect(mocks.replace).not.toHaveBeenCalledWith('/login?error=oauth')
+  })
+
+  it('session_network_failure_after_registration_401_allows_retry_ok', async () => {
+    // given
+    const actor = userEvent.setup()
+    mocks.pending.mockRejectedValue(new AuthError(401))
+    mocks.restore.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce(user)
+    render(<OAuthCallback />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(' 잠시 후 다시 시도')
+    expect(mocks.replace).not.toHaveBeenCalled()
+    // when
+    await actor.click(screen.getByRole('button', { name: '다시 시도' }))
+    // then
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/workspace'))
+  })
+
+  it('registration_server_failure_does_not_attempt_login_restore_ko', async () => {
+    // given
+    mocks.pending.mockRejectedValue(new AuthError(500))
+    // when
+    render(<OAuthCallback />)
+    // then
+    await screen.findByRole('alert')
+    expect(mocks.restore).not.toHaveBeenCalled()
+    expect(mocks.replace).not.toHaveBeenCalled()
+  })
+
   it('cancelled_or_expired_login_goes_to_login_ko', async () => {
     // given
     mocks.pending.mockRejectedValue(new AuthError(401))
+    mocks.restore.mockRejectedValue(new AuthError(401))
     // when
     render(<OAuthCallback />)
     // then
